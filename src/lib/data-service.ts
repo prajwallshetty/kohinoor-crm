@@ -40,6 +40,7 @@ interface MockDataSchema {
   companyBranding: any;
   storageQuota: any;
   masterItems?: any[];
+  bomItems?: any[];
 }
 
 // Initial seed data for the mock database
@@ -411,7 +412,11 @@ export const DataService = {
     if (isDbConnected) {
       try {
         return await prisma.quotation.findMany({
-          include: { customer: true, items: true, lead: true }
+          include: { 
+            customer: true, 
+            items: { include: { bomItems: true } }, 
+            lead: true 
+          }
         });
       } catch (e) {}
     }
@@ -419,7 +424,10 @@ export const DataService = {
     return db.quotations.map(q => ({
       ...q,
       customer: db.customers.find(c => c.id === q.customerId),
-      items: db.quotationItems.filter(qi => qi.quotationId === q.id),
+      items: db.quotationItems.filter(qi => qi.quotationId === q.id).map(qi => ({
+        ...qi,
+        bomItems: db.bomItems ? db.bomItems.filter((bom: any) => bom.shutterId === qi.id) : []
+      })),
       lead: db.leads.find(l => l.id === q.leadId)
     }));
   },
@@ -450,7 +458,7 @@ export const DataService = {
             ...newQuote,
             items: { 
               create: items.map(item => ({
-                productName: item.productName,
+                productName: item.productName || item.shutterName || "Rolling Shutter",
                 materialCategory: item.materialCategory || null,
                 material: item.material || null,
                 thickness: item.thickness || null,
@@ -459,13 +467,32 @@ export const DataService = {
                 width: item.width !== undefined && item.width !== null ? parseFloat(item.width) : null,
                 quantity: parseInt(item.quantity || 1),
                 unitPrice: parseFloat(item.unitPrice || 0),
-                lineTotal: parseFloat(item.lineTotal || 0)
+                lineTotal: parseFloat(item.lineTotal || 0),
+                shutterName: item.shutterName || null,
+                height: item.height !== undefined && item.height !== null ? parseFloat(item.height) : null,
+                color: item.color || null,
+                operationType: item.operationType || null,
+                motorType: item.motorType || null,
+                bomItems: {
+                  create: (item.bomItems || []).map((bom: any) => ({
+                    materialName: bom.materialName,
+                    specification: bom.specification || null,
+                    quantity: parseFloat(bom.quantity || 0),
+                    unit: bom.unit || "Pcs",
+                    rate: parseFloat(bom.rate || 0),
+                    totalPrice: parseFloat(bom.totalPrice || 0)
+                  }))
+                }
               }))
             }
           },
-          include: { items: true }
+          include: { 
+            items: { include: { bomItems: true } }
+          }
         });
-      } catch (e) {}
+      } catch (e) {
+        console.error("DB addQuotation failed", e);
+      }
     }
 
     const db = readMockDb();
@@ -473,10 +500,11 @@ export const DataService = {
     
     // Add items
     const addedItems = items.map((item, idx) => {
+      const shutterId = `qi-${Date.now()}-${idx}`;
       const qitem = {
-        id: `qi-${Date.now()}-${idx}`,
+        id: shutterId,
         quotationId: id,
-        productName: item.productName,
+        productName: item.productName || item.shutterName || "Rolling Shutter",
         materialCategory: item.materialCategory || null,
         material: item.material || null,
         thickness: item.thickness || null,
@@ -485,8 +513,32 @@ export const DataService = {
         width: item.width !== undefined && item.width !== null ? parseFloat(item.width) : null,
         quantity: parseInt(item.quantity || 1),
         unitPrice: parseFloat(item.unitPrice || 0),
-        lineTotal: parseFloat(item.lineTotal || 0)
+        lineTotal: parseFloat(item.lineTotal || 0),
+        shutterName: item.shutterName || null,
+        height: item.height !== undefined && item.height !== null ? parseFloat(item.height) : null,
+        color: item.color || null,
+        operationType: item.operationType || null,
+        motorType: item.motorType || null,
+        bomItems: [] as any[]
       };
+
+      const itemBom = (item.bomItems || []).map((bom: any, bIdx: number) => {
+        const newBom = {
+          id: `bom-${Date.now()}-${idx}-${bIdx}`,
+          shutterId,
+          materialName: bom.materialName,
+          specification: bom.specification || null,
+          quantity: parseFloat(bom.quantity || 0),
+          unit: bom.unit || "Pcs",
+          rate: parseFloat(bom.rate || 0),
+          totalPrice: parseFloat(bom.totalPrice || 0)
+        };
+        if (!db.bomItems) db.bomItems = [];
+        db.bomItems.push(newBom);
+        return newBom;
+      });
+
+      qitem.bomItems = itemBom;
       db.quotationItems.push(qitem);
       return qitem;
     });
@@ -547,7 +599,7 @@ export const DataService = {
       try {
         const sourceQuote = await prisma.quotation.findUnique({
           where: { id },
-          include: { items: true }
+          include: { items: { include: { bomItems: true } } }
         });
         if (!sourceQuote) return null;
 
@@ -583,11 +635,28 @@ export const DataService = {
                 width: item.width,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                lineTotal: item.lineTotal
+                lineTotal: item.lineTotal,
+                shutterName: item.shutterName,
+                height: item.height,
+                color: item.color,
+                operationType: item.operationType,
+                motorType: item.motorType,
+                bomItems: {
+                  create: item.bomItems.map(bom => ({
+                    materialName: bom.materialName,
+                    specification: bom.specification,
+                    quantity: bom.quantity,
+                    unit: bom.unit,
+                    rate: bom.rate,
+                    totalPrice: bom.totalPrice
+                  }))
+                }
               }))
             }
           },
-          include: { items: true }
+          include: { 
+            items: { include: { bomItems: true } }
+          }
         });
 
         await this.logAction("u-1", "owner@kohinoor.com", "QUOTATION_REVISION", `Created revision ${newQuoteNum} for ${baseNum}`);
@@ -629,8 +698,9 @@ export const DataService = {
 
     const sourceItems = db.quotationItems.filter(qi => qi.quotationId === id);
     const addedItems = sourceItems.map((item, idx) => {
+      const shutterId = `qi-${Date.now()}-${idx}`;
       const qitem = {
-        id: `qi-${Date.now()}-${idx}`,
+        id: shutterId,
         quotationId: newQuote.id,
         productName: item.productName,
         materialCategory: item.materialCategory || null,
@@ -641,8 +711,33 @@ export const DataService = {
         width: item.width || null,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        lineTotal: item.lineTotal
+        lineTotal: item.lineTotal,
+        shutterName: item.shutterName || null,
+        height: item.height || null,
+        color: item.color || null,
+        operationType: item.operationType || null,
+        motorType: item.motorType || null,
+        bomItems: [] as any[]
       };
+
+      const sourceBoms = db.bomItems ? db.bomItems.filter((bom: any) => bom.shutterId === item.id) : [];
+      const itemBom = sourceBoms.map((bom: any, bIdx: number) => {
+        const newBom = {
+          id: `bom-${Date.now()}-${idx}-${bIdx}`,
+          shutterId,
+          materialName: bom.materialName,
+          specification: bom.specification || null,
+          quantity: bom.quantity,
+          unit: bom.unit || "Pcs",
+          rate: bom.rate,
+          totalPrice: bom.totalPrice
+        };
+        if (!db.bomItems) db.bomItems = [];
+        db.bomItems.push(newBom);
+        return newBom;
+      });
+
+      qitem.bomItems = itemBom;
       db.quotationItems.push(qitem);
       return qitem;
     });
@@ -692,13 +787,13 @@ export const DataService = {
         // Check if already converted
         const existing = await prisma.invoice.findFirst({ 
           where: { quotationId },
-          include: { customer: true, payments: true, quotation: { include: { items: true } } }
+          include: { customer: true, payments: true, quotation: { include: { items: { include: { bomItems: true } } } } }
         });
         if (existing) return existing;
 
         const quote = await prisma.quotation.findUnique({
           where: { id: quotationId },
-          include: { items: true }
+          include: { items: { include: { bomItems: true } } }
         });
         if (!quote) throw new Error("Quotation not found");
 
@@ -713,27 +808,37 @@ export const DataService = {
           
           // Add new items
           for (const item of items) {
-            const hasDims = item.length && item.width;
-            const isSft = item.unit === "Sft" || item.unit === "Sqft";
-            const lineTotal = hasDims && isSft
-              ? Number(item.length) * Number(item.width) * Number(item.quantity) * Number(item.unitPrice)
-              : Number(item.quantity) * Number(item.unitPrice);
-            
+            const lineTotal = Number(item.quantity) * Number(item.unitPrice);
             subtotal += lineTotal;
             
             await prisma.quotationItem.create({
               data: {
                 quotationId,
-                productName: item.productName,
+                productName: item.productName || item.shutterName || "Rolling Shutter",
                 materialCategory: item.materialCategory || null,
                 material: item.material || null,
                 thickness: item.thickness || null,
                 profile: item.profile || null,
-                length: item.length ? parseFloat(item.length) : null,
-                width: item.width ? parseFloat(item.width) : null,
+                length: item.length !== undefined && item.length !== null ? parseFloat(item.length) : null,
+                width: item.width !== undefined && item.width !== null ? parseFloat(item.width) : null,
                 quantity: parseInt(item.quantity) || 1,
                 unitPrice: parseFloat(item.unitPrice) || 0,
-                lineTotal
+                lineTotal,
+                shutterName: item.shutterName || null,
+                height: item.height !== undefined && item.height !== null ? parseFloat(item.height) : null,
+                color: item.color || null,
+                operationType: item.operationType || null,
+                motorType: item.motorType || null,
+                bomItems: {
+                  create: (item.bomItems || []).map((bom: any) => ({
+                    materialName: bom.materialName,
+                    specification: bom.specification || null,
+                    quantity: parseFloat(bom.quantity || 0),
+                    unit: bom.unit || "Pcs",
+                    rate: parseFloat(bom.rate || 0),
+                    totalPrice: parseFloat(bom.totalPrice || 0)
+                  }))
+                }
               }
             });
           }
@@ -773,7 +878,7 @@ export const DataService = {
             paymentDue: paymentDue ? new Date(paymentDue) : new Date(Date.now() + 15 * 24 * 3600 * 1000),
             status: "PENDING"
           },
-          include: { customer: true, payments: true, quotation: { include: { items: true } } }
+          include: { customer: true, payments: true, quotation: { include: { items: { include: { bomItems: true } } } } }
         });
 
         this.logAction("u-1", "owner@kohinoor.com", "CONVERT_QUOTE_INVOICE", `Converted Quote ${quote.quoteNumber} to Invoice ${invoiceNumber}`);
@@ -796,7 +901,10 @@ export const DataService = {
           if (q) {
             return {
               ...q,
-              items: db.quotationItems.filter(qi => qi.quotationId === q.id)
+              items: db.quotationItems.filter(qi => qi.quotationId === q.id).map(qi => ({
+                ...qi,
+                bomItems: db.bomItems ? db.bomItems.filter((bom: any) => bom.shutterId === qi.id) : []
+              }))
             };
           }
           return null;
@@ -808,39 +916,65 @@ export const DataService = {
     if (quoteIdx === -1) return null;
     const quote = db.quotations[quoteIdx];
 
-    const updatedItems = items || db.quotationItems.filter(qi => qi.quotationId === quotationId);
     let subtotal = 0;
 
     if (items) {
+      // Find old shutter IDs for this quotation
+      const oldShutterIds = db.quotationItems.filter(qi => qi.quotationId === quotationId).map(qi => qi.id);
       // Remove old items
       db.quotationItems = db.quotationItems.filter(qi => qi.quotationId !== quotationId);
+      // Remove old BOM items
+      db.bomItems = db.bomItems ? db.bomItems.filter((bom: any) => !oldShutterIds.includes(bom.shutterId)) : [];
       
       // Add new items
       items.forEach((item, idx) => {
-        const hasDims = item.length && item.width;
-        const isSft = item.unit === "Sft" || item.unit === "Sqft";
-        const lineTotal = hasDims && isSft
-          ? Number(item.length) * Number(item.width) * Number(item.quantity) * Number(item.unitPrice)
-          : Number(item.quantity) * Number(item.unitPrice);
-        
+        const shutterId = `qi-${Date.now()}-${idx}`;
+        const lineTotal = Number(item.quantity) * Number(item.unitPrice);
         subtotal += lineTotal;
-        db.quotationItems.push({
-          id: `qi-${Date.now()}-${idx}`,
+
+        const qitem = {
+          id: shutterId,
           quotationId,
-          productName: item.productName,
+          productName: item.productName || item.shutterName || "Rolling Shutter",
           materialCategory: item.materialCategory || null,
           material: item.material || null,
           thickness: item.thickness || null,
           profile: item.profile || null,
-          length: item.length ? parseFloat(item.length) : null,
-          width: item.width ? parseFloat(item.width) : null,
+          length: item.length !== undefined && item.length !== null ? parseFloat(item.length) : null,
+          width: item.width !== undefined && item.width !== null ? parseFloat(item.width) : null,
           quantity: parseInt(item.quantity) || 1,
           unitPrice: parseFloat(item.unitPrice) || 0,
-          lineTotal
+          lineTotal,
+          shutterName: item.shutterName || null,
+          height: item.height !== undefined && item.height !== null ? parseFloat(item.height) : null,
+          color: item.color || null,
+          operationType: item.operationType || null,
+          motorType: item.motorType || null,
+          bomItems: [] as any[]
+        };
+
+        const itemBom = (item.bomItems || []).map((bom: any, bIdx: number) => {
+          const newBom = {
+            id: `bom-${Date.now()}-${idx}-${bIdx}`,
+            shutterId,
+            materialName: bom.materialName,
+            specification: bom.specification || null,
+            quantity: parseFloat(bom.quantity || 0),
+            unit: bom.unit || "Pcs",
+            rate: parseFloat(bom.rate || 0),
+            totalPrice: parseFloat(bom.totalPrice || 0)
+          };
+          if (!db.bomItems) db.bomItems = [];
+          db.bomItems.push(newBom);
+          return newBom;
         });
+
+        qitem.bomItems = itemBom;
+        db.quotationItems.push(qitem);
       });
     } else {
-      subtotal = updatedItems.reduce((sum: number, i: any) => sum + i.lineTotal, 0);
+      const sourceItems = db.quotationItems.filter(qi => qi.quotationId === quotationId);
+      subtotal = sourceItems.reduce((sum: number, i: any) => sum + i.lineTotal, 0);
     }
 
     const finalDiscount = typeof discount === "number" ? discount : quote.discount;
@@ -879,14 +1013,17 @@ export const DataService = {
     db.invoices.push(invoice);
     writeMockDb(db);
     this.logAction("u-1", "owner@kohinoor.com", "CONVERT_QUOTE_INVOICE", `Converted Quote ${quote.quoteNumber} to Invoice ${invoiceNumber}`);
-
+    
     return {
       ...invoice,
       customer: db.customers.find(c => c.id === invoice.customerId),
       payments: [],
       quotation: {
         ...db.quotations[quoteIdx],
-        items: db.quotationItems.filter(qi => qi.quotationId === quotationId)
+        items: db.quotationItems.filter(qi => qi.quotationId === quotationId).map(qi => ({
+          ...qi,
+          bomItems: db.bomItems ? db.bomItems.filter((bom: any) => bom.shutterId === qi.id) : []
+        }))
       }
     };
   },

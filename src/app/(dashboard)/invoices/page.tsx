@@ -88,6 +88,11 @@ export default function InvoicesPage() {
   const [convertTerms, setConvertTerms] = useState("");
   const [masterItems, setMasterItems] = useState<any[]>([]);
 
+  // BOM Configuration inside Conversion
+  const [convertBomShutterIndex, setConvertBomShutterIndex] = useState<number | null>(null);
+  const [showConvertBomModal, setShowConvertBomModal] = useState(false);
+  const [editingConvertBomItems, setEditingConvertBomItems] = useState<any[]>([]);
+
   const categoriesList = masterItems.filter(mi => mi.category === "Material Categories" && !mi.isDisabled);
   const thicknessList = masterItems.filter(mi => mi.category === "Thickness" && !mi.isDisabled);
   const profilesList = masterItems.filter(mi => mi.category === "Profiles" && !mi.isDisabled);
@@ -146,27 +151,157 @@ export default function InvoicesPage() {
     }
   }, [selectedInvoice]);
 
-  const calculateConvertAmount = (item: any): number => {
-    const len = item.length || 0;
-    const wid = item.width || 0;
-    const qty = item.quantity || 0;
-    const rate = item.unitPrice || 0;
-    const unit = (item.unit || "Pcs").toLowerCase();
+  const calculateDefaultBOM = (shutter: any, itemsList: any[]) => {
+    const width = parseFloat(shutter.width || 0);
+    const height = parseFloat(shutter.height || 0);
+    const area = width * height;
+    
+    const findRate = (catName: string, nameSearch?: string) => {
+      const list = itemsList.filter(mi => mi.category === catName && !mi.isDisabled);
+      if (nameSearch) {
+        const match = list.find(mi => mi.name.toLowerCase().includes(nameSearch.toLowerCase()));
+        if (match) return { rate: match.rate, spec: match.name, unit: match.unit };
+      }
+      const first = list[0];
+      return first ? { rate: first.rate, spec: first.name, unit: first.unit } : { rate: 0, spec: "", unit: "Pcs" };
+    };
 
-    if (unit === "sft" || unit === "sqft" || unit === "sqrft") {
-      return len * wid * qty * rate;
-    } else if (unit === "rft" || unit === "ft" || unit === "feet") {
-      return len * qty * rate;
-    } else {
-      return qty * rate;
+    const pgiSheet = findRate("GI Sheet", shutter.material);
+    const pKabadi = findRate("Kabadi");
+    const pPipe = findRate("Pipe");
+    const pSpring = findRate("Springs");
+    const pBracket = findRate("Brackets");
+    const pWheel = findRate("Wheels");
+    const pGuide = findRate("Guides");
+    const pTopCap = findRate("Top Cap");
+    const pLock = findRate("Lock Set");
+    const pHandle = findRate("Handle");
+    const pFitting = findRate("Fittings");
+
+    const bom = [
+      {
+        materialName: "GI Sheet",
+        specification: pgiSheet.spec || `${shutter.material || "GI"} ${shutter.thickness || "21G"} ${shutter.profile || "Flat"}`,
+        quantity: area,
+        unit: pgiSheet.unit || "Sft",
+        rate: pgiSheet.rate || 95,
+        totalPrice: area * (pgiSheet.rate || 95)
+      },
+      {
+        materialName: "Kabadi",
+        specification: pKabadi.spec || "Standard Flat",
+        quantity: width,
+        unit: pKabadi.unit || "Rft",
+        rate: pKabadi.rate || 120,
+        totalPrice: width * (pKabadi.rate || 120)
+      },
+      {
+        materialName: "Pipe",
+        specification: pPipe.spec || "Heavy Pipe",
+        quantity: width,
+        unit: pPipe.unit || "Rft",
+        rate: pPipe.rate || 220,
+        totalPrice: width * (pPipe.rate || 220)
+      },
+      {
+        materialName: "Spring",
+        specification: pSpring.spec || "Heavy 5G",
+        quantity: Math.ceil(width / 3),
+        unit: pSpring.unit || "Pcs",
+        rate: pSpring.rate || 350,
+        totalPrice: Math.ceil(width / 3) * (pSpring.rate || 350)
+      },
+      {
+        materialName: "Bracket",
+        specification: pBracket.spec || "13/16 Bracket",
+        quantity: 2,
+        unit: pBracket.unit || "Pcs",
+        rate: pBracket.rate || 450,
+        totalPrice: 2 * (pBracket.rate || 450)
+      },
+      {
+        materialName: "Wheel",
+        specification: pWheel.spec || "Standard Wheel",
+        quantity: 2,
+        unit: pWheel.unit || "Pcs",
+        rate: pWheel.rate || 150,
+        totalPrice: 2 * (pWheel.rate || 150)
+      },
+      {
+        materialName: "Guide",
+        specification: pGuide.spec || "Pair Guide",
+        quantity: height * 2,
+        unit: pGuide.unit || "Rft",
+        rate: pGuide.rate || 110,
+        totalPrice: (height * 2) * (pGuide.rate || 110)
+      },
+      {
+        materialName: "Top Cap",
+        specification: pTopCap.spec || "Top Cover",
+        quantity: 1,
+        unit: pTopCap.unit || "Pcs",
+        rate: pTopCap.rate || 250,
+        totalPrice: 1 * (pTopCap.rate || 250)
+      },
+      {
+        materialName: "Lock Set",
+        specification: pLock.spec || "Standard Lock",
+        quantity: 1,
+        unit: pLock.unit || "Pcs",
+        rate: pLock.rate || 350,
+        totalPrice: 1 * (pLock.rate || 350)
+      },
+      {
+        materialName: "Handle",
+        specification: pHandle.spec || "Basic Pull",
+        quantity: 2,
+        unit: pHandle.unit || "Pcs",
+        rate: pHandle.rate || 80,
+        totalPrice: 2 * (pHandle.rate || 80)
+      },
+      {
+        materialName: "Fittings",
+        specification: pFitting.spec || "Fitting Kit",
+        quantity: 1,
+        unit: pFitting.unit || "Pcs",
+        rate: pFitting.rate || 150,
+        totalPrice: 1 * (pFitting.rate || 150)
+      }
+    ];
+
+    if (shutter.operationType === "Motorized") {
+      const pMotor = findRate("Motors", shutter.motorType);
+      bom.push({
+        materialName: "Motor",
+        specification: pMotor.spec || shutter.motorType || "Standard Motor",
+        quantity: 1,
+        unit: pMotor.unit || "Pcs",
+        rate: pMotor.rate || 12000,
+        totalPrice: 1 * (pMotor.rate || 12000)
+      });
     }
+
+    return bom;
   };
 
   const addConvertItemRow = () => {
-    setConvertItems((prev) => [
-      ...prev,
-      { productName: "Material Item", materialCategory: "Material Categories", material: "", quantity: 1, unitPrice: 0, lineTotal: 0, unit: "Pcs" }
-    ]);
+    const defaultShutter = {
+      shutterName: `Shutter ${convertItems.length + 1}`,
+      width: 10,
+      height: 8,
+      material: "GI",
+      thickness: "21G",
+      profile: "Flat",
+      color: "Grey",
+      operationType: "Manual",
+      motorType: "",
+      quantity: 1,
+      unitPrice: 18000,
+      lineTotal: 18000,
+      bomItems: [] as any[]
+    };
+    defaultShutter.bomItems = calculateDefaultBOM(defaultShutter, masterItems);
+    setConvertItems((prev) => [...prev, defaultShutter]);
   };
 
   const removeConvertItemRow = (index: number) => {
@@ -179,46 +314,83 @@ export default function InvoicesPage() {
       const updated = [...prev];
       const item = { ...updated[index] };
 
-      if (field === "materialCategory") {
-        item.materialCategory = value;
-        item.material = "";
-        item.thickness = "";
-        item.profile = "";
-        item.length = 0;
-        item.width = 0;
-        
-        const firstMatch = masterItems.find(mi => mi.category === value && !mi.isDisabled);
-        item.unit = firstMatch ? firstMatch.unit : "Pcs";
-        item.unitPrice = firstMatch ? firstMatch.rate : 0;
-        item.productName = value;
+      if (field === "shutterName") {
+        item.shutterName = value;
+      } else if (field === "width") {
+        item.width = parseFloat(value) || 0;
+      } else if (field === "height") {
+        item.height = parseFloat(value) || 0;
       } else if (field === "material") {
         item.material = value;
-        const dbItem = masterItems.find(mi => mi.category === item.materialCategory && mi.name === value);
-        if (dbItem) {
-          item.unit = dbItem.unit;
-          item.unitPrice = dbItem.rate;
-        }
-        item.productName = `${item.materialCategory || ""} (${value})`;
       } else if (field === "thickness") {
         item.thickness = value;
       } else if (field === "profile") {
         item.profile = value;
-      } else if (field === "length") {
-        item.length = parseFloat(value) || 0;
-      } else if (field === "width") {
-        item.width = parseFloat(value) || 0;
+      } else if (field === "color") {
+        item.color = value;
+      } else if (field === "operationType") {
+        item.operationType = value;
+        if (value === "Manual") {
+          item.motorType = "";
+        } else {
+          const match = masterItems.find(mi => mi.category === "Motors" && !mi.isDisabled);
+          item.motorType = match ? match.name : "Somfy 120Nm";
+        }
+      } else if (field === "motorType") {
+        item.motorType = value;
       } else if (field === "quantity") {
         item.quantity = Math.max(1, Math.floor(parseFloat(value) || 1));
       } else if (field === "unitPrice") {
         item.unitPrice = Math.max(0, parseFloat(value) || 0);
-      } else if (field === "productName") {
-        item.productName = value;
-      } else if (field === "unit") {
-        item.unit = value;
       }
 
-      item.lineTotal = calculateConvertAmount(item);
+      item.lineTotal = item.quantity * item.unitPrice;
+
+      if (["width", "height", "material", "thickness", "profile", "operationType", "motorType"].includes(field)) {
+        item.bomItems = calculateDefaultBOM(item, masterItems);
+      }
+
       updated[index] = item;
+      return updated;
+    });
+  };
+
+  const openConvertBOM = (idx: number) => {
+    setConvertBomShutterIndex(idx);
+    const shutter = convertItems[idx];
+    const boms = shutter.bomItems && shutter.bomItems.length > 0
+      ? shutter.bomItems
+      : calculateDefaultBOM(shutter, masterItems);
+    setEditingConvertBomItems(JSON.parse(JSON.stringify(boms)));
+    setShowConvertBomModal(true);
+  };
+
+  const saveConvertBOM = () => {
+    if (convertBomShutterIndex === null) return;
+    setConvertItems((prev) => {
+      const updated = [...prev];
+      updated[convertBomShutterIndex].bomItems = editingConvertBomItems;
+      return updated;
+    });
+    setShowConvertBomModal(false);
+    setConvertBomShutterIndex(null);
+  };
+
+  const updateConvertBomItemField = (idx: number, field: string, value: any) => {
+    setEditingConvertBomItems((prev) => {
+      const updated = [...prev];
+      const bom = { ...updated[idx] };
+      if (field === "specification") {
+        bom.specification = value;
+      } else if (field === "quantity") {
+        bom.quantity = parseFloat(value) || 0;
+      } else if (field === "unit") {
+        bom.unit = value;
+      } else if (field === "rate") {
+        bom.rate = parseFloat(value) || 0;
+      }
+      bom.totalPrice = bom.quantity * bom.rate;
+      updated[idx] = bom;
       return updated;
     });
   };
@@ -566,12 +738,16 @@ export default function InvoicesPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {selectedInvoice.quotation?.items?.map((item: any, idx: number) => {
-                      const sizeStr = item.length || item.width ? `(${item.length} x ${item.width})` : "";
                       return (
                         <tr key={idx} className="hover:bg-slate-50/50">
-                          <td className="py-1.5 font-medium">{item.productName} {sizeStr}</td>
+                          <td className="py-1.5 font-sans font-medium text-slate-800">
+                            <div className="font-bold text-slate-900">{item.shutterName || `Rolling Shutter ${idx + 1}`}</div>
+                            <div className="text-[9px] text-slate-500 font-sans mt-0.5">
+                              Size: {item.width}Ft x {item.height}Ft | {item.material} {item.thickness} {item.profile} | {item.operationType} {item.motorType && `(${item.motorType})`} {item.color && `| Color: ${item.color}`}
+                            </div>
+                          </td>
                           <td className="py-1.5 text-center font-mono">73083000</td>
-                          <td className="py-1.5 text-right font-mono">{item.quantity} {item.unit || "Pcs"}</td>
+                          <td className="py-1.5 text-right font-mono">{item.quantity} Nos</td>
                           <td className="py-1.5 text-right font-mono">₹{item.unitPrice.toLocaleString("en-IN")}</td>
                           <td className="py-1.5 text-right font-mono font-bold text-slate-800">
                             ₹{item.lineTotal.toLocaleString("en-IN")}
@@ -853,158 +1029,166 @@ export default function InvoicesPage() {
 
                 <div className="space-y-3">
                   {convertItems.map((item, idx) => (
-                    <div key={idx} className="flex flex-wrap items-end gap-3 bg-secondary/10 p-3 rounded-lg border border-border/40 transition-all hover:border-border select-none">
-                      {/* Product Name */}
-                      <div className="flex-1 min-w-[200px] space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground">Product Description</label>
+                    <div key={idx} className="flex flex-wrap items-end gap-3 bg-secondary/10 p-3.5 rounded-lg border border-border/40 transition-all hover:border-border select-none font-sans text-xs">
+                      {/* Shutter Name */}
+                      <div className="flex-1 min-w-[150px] space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase font-bold">Shutter Name</label>
                         <input
                           type="text"
-                          required
-                          value={item.productName || ""}
-                          onChange={(e) => updateConvertItemRow(idx, "productName", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground"
+                          placeholder="e.g. Warehouse entrance"
+                          value={item.shutterName || ""}
+                          onChange={(e) => updateConvertItemRow(idx, "shutterName", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
                         />
                       </div>
 
-                      {/* Material Category select */}
-                      <div className="w-32 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground">Category</label>
+                      {/* Dimensions: Width & Height */}
+                      <div className="w-16 space-y-1 font-mono">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Width (Ft)</label>
+                        <input
+                          type="number"
+                          required
+                          placeholder="W"
+                          value={item.width || ""}
+                          onChange={(e) => updateConvertItemRow(idx, "width", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center font-semibold"
+                        />
+                      </div>
+
+                      <div className="w-16 space-y-1 font-mono">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Height (Ft)</label>
+                        <input
+                          type="number"
+                          required
+                          placeholder="H"
+                          value={item.height || ""}
+                          onChange={(e) => updateConvertItemRow(idx, "height", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center font-semibold"
+                        />
+                      </div>
+
+                      {/* Material (GI / ZN / PPGI) */}
+                      <div className="w-20 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Material</label>
                         <select
-                          value={item.materialCategory || "Material Categories"}
-                          onChange={(e) => updateConvertItemRow(idx, "materialCategory", e.target.value)}
+                          value={item.material || "GI"}
+                          onChange={(e) => updateConvertItemRow(idx, "material", e.target.value)}
                           className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
                         >
-                          <option value="Material Categories">Select...</option>
-                          <option value="GI Sheet" className="bg-card">GI Sheet</option>
-                          <option value="Galvalume" className="bg-card">Galvalume</option>
-                          <option value="Motors" className="bg-card">Motors</option>
-                          <option value="Springs" className="bg-card">Springs</option>
-                          <option value="Guides" className="bg-card">Guides</option>
-                          <option value="Brackets" className="bg-card">Brackets</option>
-                          <option value="Installation" className="bg-card">Installation</option>
-                          <option value="Other" className="bg-card">Other</option>
+                          <option value="GI" className="bg-card">GI</option>
+                          <option value="ZN" className="bg-card">ZN</option>
+                          <option value="PPGI" className="bg-card">PPGI</option>
                         </select>
                       </div>
 
-                      {/* Material select */}
-                      <div className="w-32 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground">Specification</label>
+                      {/* Thickness Gauge */}
+                      <div className="w-20 space-y-1 font-mono">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Gauge</label>
                         <select
-                          required
-                          value={item.material || ""}
-                          onChange={(e) => updateConvertItemRow(idx, "material", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground"
-                        >
-                          <option value="">Spec...</option>
-                          {masterItems
-                            .filter((mi: any) => mi.category === item.materialCategory && !mi.isDisabled)
-                            .map((mi: any) => (
-                              <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
-                            ))}
-                        </select>
-                      </div>
-
-                      {/* Thickness select */}
-                      <div className="w-24 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground">Thickness</label>
-                        <select
-                          disabled={item.materialCategory !== "GI Sheet"}
-                          value={item.thickness || ""}
+                          value={item.thickness || "21G"}
                           onChange={(e) => updateConvertItemRow(idx, "thickness", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground disabled:opacity-40"
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold font-mono"
                         >
-                          <option value="">Gauge</option>
                           {thicknessList.map((mi: any) => (
-                            <option key={mi.id} value={mi.name} className="bg-card font-mono">{mi.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Profile select */}
-                      <div className="w-24 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground">Profile</label>
-                        <select
-                          disabled={item.materialCategory !== "GI Sheet"}
-                          value={item.profile || ""}
-                          onChange={(e) => updateConvertItemRow(idx, "profile", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground disabled:opacity-40"
-                        >
-                          <option value="">Profile</option>
-                          {profilesList.map((mi: any) => (
                             <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
                           ))}
                         </select>
                       </div>
 
-                      {/* Length */}
-                      <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground">Len (Ft)</label>
-                        <input
-                          type="number"
-                          placeholder="Len"
-                          value={item.length || ""}
-                          disabled={item.unit === "Pcs" || item.unit === "Kg"}
-                          onChange={(e) => updateConvertItemRow(idx, "length", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center disabled:opacity-30"
-                        />
-                      </div>
-
-                      {/* Width */}
-                      <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground">Wid (Ft)</label>
-                        <input
-                          type="number"
-                          placeholder="Wid"
-                          value={item.width || ""}
-                          disabled={item.unit !== "Sft" && item.unit !== "Sqft"}
-                          onChange={(e) => updateConvertItemRow(idx, "width", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center disabled:opacity-30"
-                        />
-                      </div>
-
-                      {/* Unit */}
-                      <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground">Unit</label>
+                      {/* Profile (Flat / Semi / Half Round / Round) */}
+                      <div className="w-24 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Profile</label>
                         <select
-                          value={item.unit || "Pcs"}
-                          onChange={(e) => updateConvertItemRow(idx, "unit", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-1 py-1 text-xs outline-none text-foreground text-center"
+                          value={item.profile || "Flat"}
+                          onChange={(e) => updateConvertItemRow(idx, "profile", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
                         >
-                          <option value="Pcs" className="bg-card">Pcs</option>
-                          <option value="Sft" className="bg-card">Sft</option>
-                          <option value="Rft" className="bg-card">Rft</option>
-                          <option value="Kg" className="bg-card">Kg</option>
+                          <option value="Flat" className="bg-card">Flat</option>
+                          <option value="Semi" className="bg-card">Semi</option>
+                          <option value="Half Round" className="bg-card">Half Round</option>
+                          <option value="Round" className="bg-card">Round</option>
+                        </select>
+                      </div>
+
+                      {/* Color */}
+                      <div className="w-20 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Color</label>
+                        <input
+                          type="text"
+                          value={item.color || ""}
+                          onChange={(e) => updateConvertItemRow(idx, "color", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
+                        />
+                      </div>
+
+                      {/* Operation Type (Manual / Motorized) */}
+                      <div className="w-24 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Operation</label>
+                        <select
+                          value={item.operationType || "Manual"}
+                          onChange={(e) => updateConvertItemRow(idx, "operationType", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
+                        >
+                          <option value="Manual" className="bg-card">Manual</option>
+                          <option value="Motorized" className="bg-card">Motorized</option>
+                        </select>
+                      </div>
+
+                      {/* Motor Type */}
+                      <div className="w-28 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Motor Type</label>
+                        <select
+                          disabled={item.operationType !== "Motorized"}
+                          value={item.motorType || ""}
+                          onChange={(e) => updateConvertItemRow(idx, "motorType", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground disabled:opacity-30 font-semibold"
+                        >
+                          <option value="">No Motor</option>
+                          {masterItems
+                            .filter(mi => mi.category === "Motors" && !mi.isDisabled)
+                            .map((mi) => (
+                              <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
+                            ))}
                         </select>
                       </div>
 
                       {/* Qty */}
                       <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground">Qty</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase font-bold">Qty</label>
                         <input
                           type="number"
                           required
                           value={item.quantity || "1"}
                           onChange={(e) => updateConvertItemRow(idx, "quantity", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center"
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center font-bold"
                         />
                       </div>
 
                       {/* Rate */}
-                      <div className="w-20 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground">Rate (₹)</label>
+                      <div className="w-24 space-y-1 font-mono">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase font-bold">Rate (₹)</label>
                         <input
                           type="number"
                           required
                           value={item.unitPrice || "0"}
                           onChange={(e) => updateConvertItemRow(idx, "unitPrice", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-right"
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-right font-bold text-emerald-400"
                         />
                       </div>
 
-                      {/* Amount calculated */}
-                      <div className="w-24 text-right font-bold text-foreground font-mono leading-none pb-2 select-none text-xs">
+                      {/* Total price */}
+                      <div className="w-24 text-right font-bold text-foreground font-mono leading-none pb-2 text-xs">
                         ₹{(item.lineTotal || 0).toLocaleString("en-IN")}
                       </div>
+
+                      {/* Configure Materials (BOM) Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => openConvertBOM(idx)}
+                        className="text-[10px] bg-secondary hover:bg-secondary/80 border border-border/80 text-foreground font-bold px-2.5 py-1.5 rounded transition-all shrink-0 mb-0.5 uppercase tracking-wider font-mono hover:text-primary hover:border-primary"
+                      >
+                        BOM
+                      </button>
 
                       <button
                         type="button"
@@ -1075,6 +1259,131 @@ export default function InvoicesPage() {
                 Approve changes & Generate Tax Invoice
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* BOM Configuration inside Invoice Conversion Modal */}
+      {showConvertBomModal && convertBomShutterIndex !== null && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-border flex justify-between items-center bg-secondary/15">
+              <div>
+                <h3 className="font-heading font-semibold text-sm">Configure Bill of Materials (BOM)</h3>
+                <p className="text-[10px] text-muted-foreground font-mono uppercase mt-0.5">
+                  Internal manufacturing list for Shutter: {convertItems[convertBomShutterIndex]?.shutterName}
+                </p>
+              </div>
+              <button 
+                onClick={() => { setShowConvertBomModal(false); setConvertBomShutterIndex(null); }} 
+                className="text-muted-foreground hover:text-foreground text-xs font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 font-sans text-xs">
+              <div className="bg-secondary/10 p-3.5 rounded-lg border border-border/50 grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-[10px]">
+                <div>
+                  <span className="text-muted-foreground block uppercase">Size</span>
+                  <span className="font-bold text-foreground">{convertItems[convertBomShutterIndex]?.width}Ft x {convertItems[convertBomShutterIndex]?.height}Ft</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block uppercase">Material Spec</span>
+                  <span className="font-bold text-foreground">{convertItems[convertBomShutterIndex]?.material} ({convertItems[convertBomShutterIndex]?.thickness})</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block uppercase">Profile</span>
+                  <span className="font-bold text-foreground">{convertItems[convertBomShutterIndex]?.profile}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block uppercase">Operation</span>
+                  <span className="font-bold text-foreground">{convertItems[convertBomShutterIndex]?.operationType} {convertItems[convertBomShutterIndex]?.motorType && `(${convertItems[convertBomShutterIndex]?.motorType})`}</span>
+                </div>
+              </div>
+
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-secondary/30 border-b border-border font-mono text-[10px] uppercase text-muted-foreground">
+                      <th className="p-2.5">Material Name</th>
+                      <th className="p-2.5">Specification</th>
+                      <th className="p-2.5 text-center w-24">Qty</th>
+                      <th className="p-2.5 text-center w-16">Unit</th>
+                      <th className="p-2.5 text-right w-24">Rate (₹)</th>
+                      <th className="p-2.5 text-right w-28">Total Price (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {editingConvertBomItems.map((bom, bIdx) => (
+                      <tr key={bIdx} className="hover:bg-secondary/10">
+                        <td className="p-2.5 font-bold text-foreground">{bom.materialName}</td>
+                        <td className="p-2.5">
+                          <input
+                            type="text"
+                            value={bom.specification || ""}
+                            onChange={(e) => updateConvertBomItemField(bIdx, "specification", e.target.value)}
+                            className="w-full bg-secondary/20 border border-border/80 rounded px-2 py-0.5 text-xs outline-none text-foreground font-semibold"
+                          />
+                        </td>
+                        <td className="p-2.5 text-center font-mono">
+                          <input
+                            type="number"
+                            step="any"
+                            value={bom.quantity || ""}
+                            onChange={(e) => updateConvertBomItemField(bIdx, "quantity", e.target.value)}
+                            className="w-20 bg-secondary/20 border border-border/80 rounded px-1.5 py-0.5 text-xs text-center outline-none text-foreground font-bold"
+                          />
+                        </td>
+                        <td className="p-2.5 text-center font-mono">
+                          <input
+                            type="text"
+                            value={bom.unit || ""}
+                            onChange={(e) => updateConvertBomItemField(bIdx, "unit", e.target.value)}
+                            className="w-12 bg-secondary/20 border border-border/80 rounded px-1 py-0.5 text-xs text-center outline-none text-foreground font-semibold"
+                          />
+                        </td>
+                        <td className="p-2.5 text-right font-mono">
+                          <input
+                            type="number"
+                            value={bom.rate || ""}
+                            onChange={(e) => updateConvertBomItemField(bIdx, "rate", e.target.value)}
+                            className="w-20 bg-secondary/20 border border-border/80 rounded px-1.5 py-0.5 text-xs text-right outline-none text-foreground font-bold text-emerald-400"
+                          />
+                        </td>
+                        <td className="p-2.5 text-right font-mono font-bold text-foreground">
+                          ₹{(bom.totalPrice || 0).toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-between items-center bg-secondary/5 border border-border/40 p-3 rounded-lg font-mono">
+                <span className="font-bold text-[10px] uppercase text-muted-foreground">Estimated Manufacturing Cost:</span>
+                <span className="font-black text-foreground text-sm">
+                  ₹{editingConvertBomItems.reduce((sum, bom) => sum + (bom.totalPrice || 0), 0).toLocaleString("en-IN")}
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowConvertBomModal(false); setConvertBomShutterIndex(null); }}
+                  className="bg-secondary hover:bg-secondary/80 border border-border text-foreground font-bold px-4 py-2 rounded-lg text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveConvertBOM}
+                  className="bg-primary text-primary-foreground hover:bg-primary/95 font-bold px-5 py-2 rounded-lg text-xs shadow-md shadow-primary/20"
+                >
+                  Save BOM Changes
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

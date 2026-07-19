@@ -168,6 +168,27 @@ model QuotationItem {
   quantity         Int       @default(1)
   unitPrice        Float
   lineTotal        Float
+
+  // Shutter configured details
+  shutterName      String?
+  height           Float?
+  color            String?
+  operationType    String?
+  motorType        String?
+
+  bomItems         BOMItem[]
+}
+
+model BOMItem {
+  id            String        @id @default(uuid())
+  shutterId     String
+  shutter       QuotationItem @relation(fields: [shutterId], references: [id], onDelete: Cascade)
+  materialName  String
+  specification String?
+  quantity      Float
+  unit          String
+  rate          Float
+  totalPrice    Float
 }
 
 model Invoice {

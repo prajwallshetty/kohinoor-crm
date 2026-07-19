@@ -224,7 +224,7 @@
       "updatedAt": "2026-07-19T07:34:12.073Z"
     },
     {
-      "id": "q-1784446452073",
+      "id": "q-1784446452074",
       "quoteNumber": "QT-2026-8210 (Copy)",
       "customerId": "c-1",
       "leadId": "l-1",
@@ -240,7 +240,7 @@
       "updatedAt": "2026-07-19T07:34:12.073Z"
     },
     {
-      "id": "q-1784446452073",
+      "id": "q-1784446452075",
       "quoteNumber": "QT-2026-4804 (Copy)",
       "customerId": "c-1",
       "leadId": "l-1",
@@ -302,6 +302,22 @@
       "parentQuoteId": null,
       "createdAt": "2026-07-19T20:39:19.467Z",
       "updatedAt": "2026-07-19T20:39:19.467Z"
+    },
+    {
+      "id": "q-1784496039287",
+      "quoteNumber": "QT-2026-4732",
+      "customerId": "c-2",
+      "leadId": null,
+      "status": "SENT",
+      "discount": 0,
+      "gstRate": 0,
+      "gstAmount": 0,
+      "totalAmount": 18000,
+      "terms": "1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client.",
+      "version": 1,
+      "parentQuoteId": null,
+      "createdAt": "2026-07-19T21:20:39.287Z",
+      "updatedAt": "2026-07-19T21:20:39.287Z"
     }
   ],
   "quotationItems": [
@@ -411,7 +427,7 @@
     },
     {
       "id": "qi-1784446452095-0",
-      "quotationId": "q-1784446452073",
+      "quotationId": "q-1784446452074",
       "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
       "quantity": 4,
       "unitPrice": 70000,
@@ -419,7 +435,7 @@
     },
     {
       "id": "qi-1784446452095-1",
-      "quotationId": "q-1784446452073",
+      "quotationId": "q-1784446452074",
       "productName": "Somfy Shutter Motor 120Nm",
       "quantity": 4,
       "unitPrice": 12000,
@@ -427,7 +443,7 @@
     },
     {
       "id": "qi-1784446454506-0",
-      "quotationId": "q-1784446452073",
+      "quotationId": "q-1784446452075",
       "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
       "quantity": 4,
       "unitPrice": 70000,
@@ -435,7 +451,7 @@
     },
     {
       "id": "qi-1784446454506-1",
-      "quotationId": "q-1784446452073",
+      "quotationId": "q-1784446452075",
       "productName": "Somfy Shutter Motor 120Nm",
       "quantity": 4,
       "unitPrice": 12000,
@@ -498,6 +514,137 @@
       "quantity": 4,
       "unitPrice": 12000,
       "lineTotal": 48000
+    },
+    {
+      "id": "qi-1784496041061-0",
+      "quotationId": "q-1784496039287",
+      "productName": "Main Entrance Shutter",
+      "materialCategory": null,
+      "material": "ZN",
+      "thickness": "20G",
+      "profile": "Semi",
+      "length": null,
+      "width": 9,
+      "quantity": 1,
+      "unitPrice": 18000,
+      "lineTotal": 18000,
+      "shutterName": "Main Entrance Shutter",
+      "height": 8,
+      "color": "Grey",
+      "operationType": "Manual",
+      "motorType": null,
+      "bomItems": [
+        {
+          "id": "bom-1784496041061-0-0",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "GI Sheet",
+          "specification": "ZN 20G Semi",
+          "quantity": 72,
+          "unit": "Pcs",
+          "rate": 95,
+          "totalPrice": 6840
+        },
+        {
+          "id": "bom-1784496041061-0-1",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Kabadi",
+          "specification": "GI Flat",
+          "quantity": 9,
+          "unit": "Kg",
+          "rate": 90,
+          "totalPrice": 810
+        },
+        {
+          "id": "bom-1784496041061-0-2",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Pipe",
+          "specification": "Heavy Pipe",
+          "quantity": 9,
+          "unit": "Pcs",
+          "rate": 220,
+          "totalPrice": 1980
+        },
+        {
+          "id": "bom-1784496041061-0-3",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Spring",
+          "specification": "SPR 4G",
+          "quantity": 3,
+          "unit": "Pcs",
+          "rate": 1200,
+          "totalPrice": 3600
+        },
+        {
+          "id": "bom-1784496041061-0-4",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Bracket",
+          "specification": "13/16",
+          "quantity": 2,
+          "unit": "Pcs",
+          "rate": 350,
+          "totalPrice": 700
+        },
+        {
+          "id": "bom-1784496041061-0-5",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Wheel",
+          "specification": "8\"",
+          "quantity": 2,
+          "unit": "Pcs",
+          "rate": 250,
+          "totalPrice": 500
+        },
+        {
+          "id": "bom-1784496041061-0-6",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Guide",
+          "specification": "GC",
+          "quantity": 16,
+          "unit": "Rft",
+          "rate": 180,
+          "totalPrice": 2880
+        },
+        {
+          "id": "bom-1784496041061-0-7",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Top Cap",
+          "specification": "Top Cover",
+          "quantity": 1,
+          "unit": "Pcs",
+          "rate": 250,
+          "totalPrice": 250
+        },
+        {
+          "id": "bom-1784496041061-0-8",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Lock Set",
+          "specification": "Standard Lock",
+          "quantity": 1,
+          "unit": "Pcs",
+          "rate": 350,
+          "totalPrice": 350
+        },
+        {
+          "id": "bom-1784496041061-0-9",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Handle",
+          "specification": "Basic Pull",
+          "quantity": 2,
+          "unit": "Pcs",
+          "rate": 80,
+          "totalPrice": 160
+        },
+        {
+          "id": "bom-1784496041061-0-10",
+          "shutterId": "qi-1784496041061-0",
+          "materialName": "Fittings",
+          "specification": "Basic",
+          "quantity": 1,
+          "unit": "Pcs",
+          "rate": 1000,
+          "totalPrice": 1000
+        }
+      ]
     }
   ],
   "invoices": [
@@ -1459,6 +1606,118 @@
       "isDisabled": false,
       "createdAt": "2026-07-19T20:30:13.609Z",
       "updatedAt": "2026-07-19T20:30:13.609Z"
+    }
+  ],
+  "bomItems": [
+    {
+      "id": "bom-1784496041061-0-0",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "GI Sheet",
+      "specification": "ZN 20G Semi",
+      "quantity": 72,
+      "unit": "Pcs",
+      "rate": 95,
+      "totalPrice": 6840
+    },
+    {
+      "id": "bom-1784496041061-0-1",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Kabadi",
+      "specification": "GI Flat",
+      "quantity": 9,
+      "unit": "Kg",
+      "rate": 90,
+      "totalPrice": 810
+    },
+    {
+      "id": "bom-1784496041061-0-2",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Pipe",
+      "specification": "Heavy Pipe",
+      "quantity": 9,
+      "unit": "Pcs",
+      "rate": 220,
+      "totalPrice": 1980
+    },
+    {
+      "id": "bom-1784496041061-0-3",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Spring",
+      "specification": "SPR 4G",
+      "quantity": 3,
+      "unit": "Pcs",
+      "rate": 1200,
+      "totalPrice": 3600
+    },
+    {
+      "id": "bom-1784496041061-0-4",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Bracket",
+      "specification": "13/16",
+      "quantity": 2,
+      "unit": "Pcs",
+      "rate": 350,
+      "totalPrice": 700
+    },
+    {
+      "id": "bom-1784496041061-0-5",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Wheel",
+      "specification": "8\"",
+      "quantity": 2,
+      "unit": "Pcs",
+      "rate": 250,
+      "totalPrice": 500
+    },
+    {
+      "id": "bom-1784496041061-0-6",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Guide",
+      "specification": "GC",
+      "quantity": 16,
+      "unit": "Rft",
+      "rate": 180,
+      "totalPrice": 2880
+    },
+    {
+      "id": "bom-1784496041061-0-7",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Top Cap",
+      "specification": "Top Cover",
+      "quantity": 1,
+      "unit": "Pcs",
+      "rate": 250,
+      "totalPrice": 250
+    },
+    {
+      "id": "bom-1784496041061-0-8",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Lock Set",
+      "specification": "Standard Lock",
+      "quantity": 1,
+      "unit": "Pcs",
+      "rate": 350,
+      "totalPrice": 350
+    },
+    {
+      "id": "bom-1784496041061-0-9",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Handle",
+      "specification": "Basic Pull",
+      "quantity": 2,
+      "unit": "Pcs",
+      "rate": 80,
+      "totalPrice": 160
+    },
+    {
+      "id": "bom-1784496041061-0-10",
+      "shutterId": "qi-1784496041061-0",
+      "materialName": "Fittings",
+      "specification": "Basic",
+      "quantity": 1,
+      "unit": "Pcs",
+      "rate": 1000,
+      "totalPrice": 1000
     }
   ]
 }

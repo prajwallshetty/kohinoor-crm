@@ -90,12 +90,31 @@ export default function QuotationsPage() {
     "1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client."
   );
   
-  // Table Items State
-  const [formItems, setFormItems] = useState<QuoteItem[]>([
-    { productName: "GI Sheet (GI 21G Flat)", materialCategory: "GI Sheet", material: "GI", thickness: "21G", profile: "Flat", length: 10, width: 8, quantity: 1, unitPrice: 85, lineTotal: 6800, unit: "Sft" }
+  // Table Items State (Rolling Shutter Configurations)
+  const [formItems, setFormItems] = useState<any[]>([
+    {
+      shutterName: "Main Entrance Shutter",
+      width: 10,
+      height: 8,
+      material: "GI",
+      thickness: "21G",
+      profile: "Flat",
+      color: "Grey",
+      operationType: "Manual",
+      motorType: "",
+      quantity: 1,
+      unitPrice: 18000,
+      lineTotal: 18000,
+      bomItems: []
+    }
   ]);
 
-  // Smart Autofill state
+  // BOM Configurator states
+  const [bomShutterIndex, setBomShutterIndex] = useState<number | null>(null);
+  const [showBomConfigModal, setShowBomConfigModal] = useState(false);
+  const [editingBomItems, setEditingBomItems] = useState<any[]>([]);
+
+  // Smart Autofill state (not used for generic rows anymore)
   const [suggestedItems, setSuggestedItems] = useState<any[] | null>(null);
   const [notification, setNotification] = useState("");
 
@@ -135,136 +154,252 @@ export default function QuotationsPage() {
     }
   }, [selectedQuote, branding]);
 
-  // Autocalculate amount based on dimensions & unit
-  const calculateAmount = (item: QuoteItem): number => {
-    const len = item.length || 0;
-    const wid = item.width || 0;
-    const qty = item.quantity || 0;
-    const rate = item.unitPrice || 0;
-    const unit = (item.unit || "Pcs").toLowerCase();
+  // Autocalculate the standard BOM items from Shutter specs
+  const calculateDefaultBOM = (shutter: any, itemsList: any[]) => {
+    const width = parseFloat(shutter.width || 0);
+    const height = parseFloat(shutter.height || 0);
+    const area = width * height;
+    
+    const findRate = (catName: string, nameSearch?: string) => {
+      const list = itemsList.filter(mi => mi.category === catName && !mi.isDisabled);
+      if (nameSearch) {
+        const match = list.find(mi => mi.name.toLowerCase().includes(nameSearch.toLowerCase()));
+        if (match) return { rate: match.rate, spec: match.name, unit: match.unit };
+      }
+      const first = list[0];
+      return first ? { rate: first.rate, spec: first.name, unit: first.unit } : { rate: 0, spec: "", unit: "Pcs" };
+    };
 
-    if (unit === "sft" || unit === "sqft" || unit === "sqrft") {
-      return len * wid * qty * rate;
-    } else if (unit === "rft" || unit === "ft" || unit === "feet") {
-      return len * qty * rate;
-    } else {
-      return qty * rate;
+    const pgiSheet = findRate("GI Sheet", shutter.material);
+    const pKabadi = findRate("Kabadi");
+    const pPipe = findRate("Pipe");
+    const pSpring = findRate("Springs");
+    const pBracket = findRate("Brackets");
+    const pWheel = findRate("Wheels");
+    const pGuide = findRate("Guides");
+    const pTopCap = findRate("Top Cap");
+    const pLock = findRate("Lock Set");
+    const pHandle = findRate("Handle");
+    const pFitting = findRate("Fittings");
+
+    const bom = [
+      {
+        materialName: "GI Sheet",
+        specification: pgiSheet.spec || `${shutter.material || "GI"} ${shutter.thickness || "21G"} ${shutter.profile || "Flat"}`,
+        quantity: area,
+        unit: pgiSheet.unit || "Sft",
+        rate: pgiSheet.rate || 95,
+        totalPrice: area * (pgiSheet.rate || 95)
+      },
+      {
+        materialName: "Kabadi",
+        specification: pKabadi.spec || "Standard Flat",
+        quantity: width,
+        unit: pKabadi.unit || "Rft",
+        rate: pKabadi.rate || 120,
+        totalPrice: width * (pKabadi.rate || 120)
+      },
+      {
+        materialName: "Pipe",
+        specification: pPipe.spec || "Heavy Pipe",
+        quantity: width,
+        unit: pPipe.unit || "Rft",
+        rate: pPipe.rate || 220,
+        totalPrice: width * (pPipe.rate || 220)
+      },
+      {
+        materialName: "Spring",
+        specification: pSpring.spec || "Heavy 5G",
+        quantity: Math.ceil(width / 3),
+        unit: pSpring.unit || "Pcs",
+        rate: pSpring.rate || 350,
+        totalPrice: Math.ceil(width / 3) * (pSpring.rate || 350)
+      },
+      {
+        materialName: "Bracket",
+        specification: pBracket.spec || "13/16 Bracket",
+        quantity: 2,
+        unit: pBracket.unit || "Pcs",
+        rate: pBracket.rate || 450,
+        totalPrice: 2 * (pBracket.rate || 450)
+      },
+      {
+        materialName: "Wheel",
+        specification: pWheel.spec || "Standard Wheel",
+        quantity: 2,
+        unit: pWheel.unit || "Pcs",
+        rate: pWheel.rate || 150,
+        totalPrice: 2 * (pWheel.rate || 150)
+      },
+      {
+        materialName: "Guide",
+        specification: pGuide.spec || "Pair Guide",
+        quantity: height * 2,
+        unit: pGuide.unit || "Rft",
+        rate: pGuide.rate || 110,
+        totalPrice: (height * 2) * (pGuide.rate || 110)
+      },
+      {
+        materialName: "Top Cap",
+        specification: pTopCap.spec || "Top Cover",
+        quantity: 1,
+        unit: pTopCap.unit || "Pcs",
+        rate: pTopCap.rate || 250,
+        totalPrice: 1 * (pTopCap.rate || 250)
+      },
+      {
+        materialName: "Lock Set",
+        specification: pLock.spec || "Standard Lock",
+        quantity: 1,
+        unit: pLock.unit || "Pcs",
+        rate: pLock.rate || 350,
+        totalPrice: 1 * (pLock.rate || 350)
+      },
+      {
+        materialName: "Handle",
+        specification: pHandle.spec || "Basic Pull",
+        quantity: 2,
+        unit: pHandle.unit || "Pcs",
+        rate: pHandle.rate || 80,
+        totalPrice: 2 * (pHandle.rate || 80)
+      },
+      {
+        materialName: "Fittings",
+        specification: pFitting.spec || "Fitting Kit",
+        quantity: 1,
+        unit: pFitting.unit || "Pcs",
+        rate: pFitting.rate || 150,
+        totalPrice: 1 * (pFitting.rate || 150)
+      }
+    ];
+
+    if (shutter.operationType === "Motorized") {
+      const pMotor = findRate("Motors", shutter.motorType);
+      bom.push({
+        materialName: "Motor",
+        specification: pMotor.spec || shutter.motorType || "Standard Motor",
+        quantity: 1,
+        unit: pMotor.unit || "Pcs",
+        rate: pMotor.rate || 12000,
+        totalPrice: 1 * (pMotor.rate || 12000)
+      });
     }
+
+    return bom;
   };
 
   const addItemRow = () => {
-    setFormItems((prev) => [
-      ...prev,
-      { productName: "Material Item", materialCategory: "Material Categories", material: "", quantity: 1, unitPrice: 0, lineTotal: 0, unit: "Pcs" }
-    ]);
+    const defaultShutter = {
+      shutterName: `Shutter ${formItems.length + 1}`,
+      width: 10,
+      height: 8,
+      material: "GI",
+      thickness: "21G",
+      profile: "Flat",
+      color: "Grey",
+      operationType: "Manual",
+      motorType: "",
+      quantity: 1,
+      unitPrice: 18000,
+      lineTotal: 18000,
+      bomItems: [] as any[]
+    };
+    
+    defaultShutter.bomItems = calculateDefaultBOM(defaultShutter, masterItems);
+    setFormItems((prev) => [...prev, defaultShutter]);
   };
 
-  const updateItemRow = (index: number, field: keyof QuoteItem, value: any) => {
+  const updateItemRow = (index: number, field: string, value: any) => {
     setFormItems((prev) => {
       const updated = [...prev];
       const item = { ...updated[index] };
 
-      if (field === "materialCategory") {
-        item.materialCategory = value;
-        item.material = "";
-        item.thickness = "";
-        item.profile = "";
-        item.length = 0;
-        item.width = 0;
-        
-        // Find default unit & rate if category directly matches a Master category
-        const firstMatch = masterItems.find(mi => mi.category === value && !mi.isDisabled);
-        item.unit = firstMatch ? firstMatch.unit : "Pcs";
-        item.unitPrice = firstMatch ? firstMatch.rate : 0;
-        item.productName = value;
-      } else if (field === "material") {
-        item.material = value;
-        // Look up default rate & unit for this specific selection
-        const dbItem = masterItems.find(mi => mi.category === item.materialCategory && mi.name === value);
-        if (dbItem) {
-          item.unit = dbItem.unit;
-          item.unitPrice = dbItem.rate;
-        }
-        item.productName = `${item.materialCategory || ""} (${value})`;
-        
-        // Check for smart autofill trigger: GI + 21G + Flat
-        if (item.material === "GI" && item.thickness === "21G" && item.profile === "Flat") {
-          triggerAutofillSuggestions();
-        }
-      } else if (field === "thickness") {
-        item.thickness = value;
-        if (item.material === "GI" && item.thickness === "21G" && item.profile === "Flat") {
-          triggerAutofillSuggestions();
-        }
-      } else if (field === "profile") {
-        item.profile = value;
-        if (item.material === "GI" && item.thickness === "21G" && item.profile === "Flat") {
-          triggerAutofillSuggestions();
-        }
-      } else if (field === "length") {
-        item.length = parseFloat(value) || 0;
+      if (field === "shutterName") {
+        item.shutterName = value;
       } else if (field === "width") {
         item.width = parseFloat(value) || 0;
+      } else if (field === "height") {
+        item.height = parseFloat(value) || 0;
+      } else if (field === "material") {
+        item.material = value;
+      } else if (field === "thickness") {
+        item.thickness = value;
+      } else if (field === "profile") {
+        item.profile = value;
+      } else if (field === "color") {
+        item.color = value;
+      } else if (field === "operationType") {
+        item.operationType = value;
+        if (value === "Manual") {
+          item.motorType = "";
+        } else {
+          const match = masterItems.find(mi => mi.category === "Motors" && !mi.isDisabled);
+          item.motorType = match ? match.name : "Somfy 120Nm";
+        }
+      } else if (field === "motorType") {
+        item.motorType = value;
       } else if (field === "quantity") {
         item.quantity = Math.max(1, Math.floor(parseFloat(value) || 1));
       } else if (field === "unitPrice") {
         item.unitPrice = Math.max(0, parseFloat(value) || 0);
-      } else if (field === "productName") {
-        item.productName = value;
       }
 
-      item.lineTotal = calculateAmount(item);
+      item.lineTotal = item.quantity * item.unitPrice;
+      
+      // Auto calculate default BOM when specifications or sizes change
+      if (["width", "height", "material", "thickness", "profile", "operationType", "motorType"].includes(field)) {
+        item.bomItems = calculateDefaultBOM(item, masterItems);
+      }
+
       updated[index] = item;
       return updated;
     });
   };
 
-  const triggerAutofillSuggestions = () => {
-    // smart auto fill GI, 21G, Flat suggestions
-    const suggestions = [
-      { category: "Kabadi", name: "GI Flat" },
-      { category: "Guides", name: "GC" },
-      { category: "Springs", name: "SPR 5G" },
-      { category: "Brackets", name: "13/16" }
-    ];
-    setSuggestedItems(suggestions);
-  };
-
-  const applySmartAutofill = () => {
-    if (!suggestedItems) return;
-    
-    const newRows = suggestedItems.map(sug => {
-      const dbItem = masterItems.find(mi => mi.category === sug.category && mi.name === sug.name);
-      const rate = dbItem ? dbItem.rate : 0;
-      const unit = dbItem ? dbItem.unit : "Pcs";
-      return {
-        productName: `${sug.category} (${sug.name})`,
-        materialCategory: sug.category,
-        material: sug.name,
-        thickness: "",
-        profile: "",
-        length: sug.category === "Guides" ? 10 : 1, // sample length for Guides
-        width: 0,
-        quantity: sug.category === "Wheels" || sug.category === "Brackets" ? 2 : 1, // standard quantities
-        unitPrice: rate,
-        lineTotal: 0, // calculated below
-        unit: unit
-      };
-    });
-
-    const parsedRows = newRows.map(row => ({
-      ...row,
-      lineTotal: calculateAmount(row)
-    }));
-
-    setFormItems(prev => [...prev, ...parsedRows]);
-    setSuggestedItems(null);
-    triggerToast("Autofill accessories suggestions appended!");
-  };
-
   const removeItemRow = (index: number) => {
     if (formItems.length === 1) return;
     setFormItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const openBOMConfigurator = (idx: number) => {
+    setBomShutterIndex(idx);
+    const shutter = formItems[idx];
+    const items = shutter.bomItems && shutter.bomItems.length > 0
+      ? shutter.bomItems
+      : calculateDefaultBOM(shutter, masterItems);
+    setEditingBomItems(JSON.parse(JSON.stringify(items)));
+    setShowBomConfigModal(true);
+  };
+
+  const saveBOMConfiguration = () => {
+    if (bomShutterIndex === null) return;
+    setFormItems((prev) => {
+      const updated = [...prev];
+      updated[bomShutterIndex].bomItems = editingBomItems;
+      return updated;
+    });
+    setShowBomConfigModal(false);
+    setBomShutterIndex(null);
+    triggerToast("Internal Bill of Materials (BOM) saved for this shutter!");
+  };
+
+  const updateBomItemField = (idx: number, field: string, value: any) => {
+    setEditingBomItems((prev) => {
+      const updated = [...prev];
+      const bom = { ...updated[idx] };
+      if (field === "specification") {
+        bom.specification = value;
+      } else if (field === "quantity") {
+        bom.quantity = parseFloat(value) || 0;
+      } else if (field === "unit") {
+        bom.unit = value;
+      } else if (field === "rate") {
+        bom.rate = parseFloat(value) || 0;
+      }
+      bom.totalPrice = bom.quantity * bom.rate;
+      updated[idx] = bom;
+      return updated;
+    });
   };
 
   const triggerToast = (msg: string) => {
@@ -740,16 +875,20 @@ export default function QuotationsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {selectedQuote.items?.map((item, idx) => {
-                  const hasDimensions = item.length || item.width;
+                {selectedQuote.items?.map((item: any, idx) => {
                   return (
                     <tr key={idx}>
                       <td className="py-3 text-slate-500 font-mono">{idx + 1}</td>
-                      <td className="py-3 font-medium text-slate-800">{item.productName}</td>
-                      <td className="py-3 text-center text-slate-600 font-mono">
-                        {hasDimensions ? `${item.length || 0} x ${item.width || 0}` : "-"}
+                      <td className="py-3 font-medium text-slate-800 font-sans">
+                        <div className="font-bold text-slate-900">{item.shutterName || `Rolling Shutter ${idx + 1}`}</div>
+                        <div className="text-[10px] text-slate-500 font-sans font-medium mt-0.5">
+                          Specs: {item.material} {item.thickness} {item.profile} | {item.operationType} {item.motorType && `(${item.motorType})`} {item.color && `| Color: ${item.color}`}
+                        </div>
                       </td>
-                      <td className="py-3 text-center text-slate-500 font-mono">{item.unit || "Pcs"}</td>
+                      <td className="py-3 text-center text-slate-600 font-mono">
+                        {item.width}Ft x {item.height}Ft
+                      </td>
+                      <td className="py-3 text-center text-slate-500 font-mono">Nos</td>
                       <td className="py-3 text-center text-slate-700">{item.quantity}</td>
                       <td className="py-3 text-right text-slate-700">₹{item.unitPrice.toLocaleString("en-IN")}</td>
                       <td className="py-3 text-right font-semibold text-slate-800">₹{item.lineTotal.toLocaleString("en-IN")}</td>
@@ -944,34 +1083,6 @@ export default function QuotationsPage() {
                 )}
               </div>
 
-              {/* Smart Autofill alert bar */}
-              {suggestedItems && (
-                <div className="border border-emerald-500/20 bg-emerald-500/10 p-3 rounded-lg flex items-center justify-between gap-4 animate-pulse">
-                  <div className="text-xs text-foreground flex items-center gap-2">
-                    <span className="text-base">💡</span>
-                    <div>
-                      <p className="font-bold text-emerald-400">Smart Accessory Suggester</p>
-                      <p className="text-muted-foreground">Automatically append GI Flat, Guide GC, Spring SPR 5G & Bracket 13/16 with default rates?</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={applySmartAutofill}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-1.5 px-3 rounded text-[11px] transition-all cursor-pointer"
-                    >
-                      Apply Autofill
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSuggestedItems(null)}
-                      className="border border-border/80 bg-secondary/50 text-foreground font-semibold py-1.5 px-2 rounded text-[11px] transition-all cursor-pointer"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Dynamic Materials items Table */}
               <div className="space-y-2">
@@ -985,135 +1096,174 @@ export default function QuotationsPage() {
                     className="text-xs text-primary hover:underline font-semibold flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add Material Row</span>
+                    <span>Add Shutter</span>
                   </button>
                 </div>
 
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                   {formItems.map((item, idx) => (
-                    <div key={idx} className="flex gap-2 items-end border border-border/40 p-3 rounded-lg bg-card/10 select-none">
-                      
-                      {/* Material Category select */}
-                      <div className="w-40 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground">Category</label>
-                        <select
+                    <div key={idx} className="flex flex-wrap items-end gap-3 border border-border/40 p-3.5 rounded-lg bg-card/10 hover:border-border transition-all select-none font-sans text-xs">
+                      {/* Shutter Name */}
+                      <div className="flex-1 min-w-[150px] space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Shutter Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Warehouse entrance"
+                          value={item.shutterName || ""}
+                          onChange={(e) => updateItemRow(idx, "shutterName", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
+                        />
+                      </div>
+
+                      {/* Dimensions: Width & Height */}
+                      <div className="w-16 space-y-1 font-mono">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Width (Ft)</label>
+                        <input
+                          type="number"
                           required
-                          value={item.materialCategory || ""}
-                          onChange={(e) => updateItemRow(idx, "materialCategory", e.target.value)}
+                          placeholder="W"
+                          value={item.width || ""}
+                          onChange={(e) => updateItemRow(idx, "width", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center"
+                        />
+                      </div>
+
+                      <div className="w-16 space-y-1 font-mono">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Height (Ft)</label>
+                        <input
+                          type="number"
+                          required
+                          placeholder="H"
+                          value={item.height || ""}
+                          onChange={(e) => updateItemRow(idx, "height", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center"
+                        />
+                      </div>
+
+                      {/* Material (GI / ZN / PPGI) */}
+                      <div className="w-20 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Material</label>
+                        <select
+                          value={item.material || "GI"}
+                          onChange={(e) => updateItemRow(idx, "material", e.target.value)}
                           className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
                         >
-                          <option value="">Choose category...</option>
-                          {categoriesList.map((cat) => (
-                            <option key={cat.id} value={cat.name} className="bg-card text-foreground">{cat.name}</option>
+                          <option value="GI" className="bg-card">GI</option>
+                          <option value="ZN" className="bg-card">ZN</option>
+                          <option value="PPGI" className="bg-card">PPGI</option>
+                        </select>
+                      </div>
+
+                      {/* Thickness Gauge */}
+                      <div className="w-20 space-y-1 font-mono">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Gauge</label>
+                        <select
+                          value={item.thickness || "21G"}
+                          onChange={(e) => updateItemRow(idx, "thickness", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold font-mono"
+                        >
+                          {thicknessList.map((mi) => (
+                            <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
                           ))}
                         </select>
                       </div>
 
-                      {/* Material Type / spec select */}
-                      <div className="w-36 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground">Material / Spec</label>
+                      {/* Profile (Flat / Semi / Half Round / Round) */}
+                      <div className="w-24 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Profile</label>
                         <select
-                          required
-                          value={item.material || ""}
-                          onChange={(e) => updateItemRow(idx, "material", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground"
+                          value={item.profile || "Flat"}
+                          onChange={(e) => updateItemRow(idx, "profile", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
                         >
-                          <option value="">Spec...</option>
+                          <option value="Flat" className="bg-card">Flat</option>
+                          <option value="Semi" className="bg-card">Semi</option>
+                          <option value="Half Round" className="bg-card">Half Round</option>
+                          <option value="Round" className="bg-card">Round</option>
+                        </select>
+                      </div>
+
+                      {/* Color */}
+                      <div className="w-20 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Color</label>
+                        <input
+                          type="text"
+                          value={item.color || ""}
+                          onChange={(e) => updateItemRow(idx, "color", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
+                        />
+                      </div>
+
+                      {/* Operation Type (Manual / Motorized) */}
+                      <div className="w-24 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Operation</label>
+                        <select
+                          value={item.operationType || "Manual"}
+                          onChange={(e) => updateItemRow(idx, "operationType", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
+                        >
+                          <option value="Manual" className="bg-card">Manual</option>
+                          <option value="Motorized" className="bg-card">Motorized</option>
+                        </select>
+                      </div>
+
+                      {/* Motor Type */}
+                      <div className="w-28 space-y-1">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Motor Type</label>
+                        <select
+                          disabled={item.operationType !== "Motorized"}
+                          value={item.motorType || ""}
+                          onChange={(e) => updateItemRow(idx, "motorType", e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground disabled:opacity-30 font-semibold"
+                        >
+                          <option value="">No Motor</option>
                           {masterItems
-                            .filter(mi => mi.category === item.materialCategory && !mi.isDisabled)
+                            .filter(mi => mi.category === "Motors" && !mi.isDisabled)
                             .map((mi) => (
                               <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
                             ))}
                         </select>
                       </div>
 
-                      {/* Thickness select (Only active for GI Sheet or similar sheet categories) */}
-                      <div className="w-24 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground">Thickness</label>
-                        <select
-                          disabled={item.materialCategory !== "GI Sheet"}
-                          value={item.thickness || ""}
-                          onChange={(e) => updateItemRow(idx, "thickness", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground disabled:opacity-40"
-                        >
-                          <option value="">Gauge</option>
-                          {thicknessList.map((mi) => (
-                            <option key={mi.id} value={mi.name} className="bg-card font-mono">{mi.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Profile select */}
-                      <div className="w-24 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground">Profile</label>
-                        <select
-                          disabled={item.materialCategory !== "GI Sheet"}
-                          value={item.profile || ""}
-                          onChange={(e) => updateItemRow(idx, "profile", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground disabled:opacity-40"
-                        >
-                          <option value="">Profile</option>
-                          {profilesList.map((mi) => (
-                            <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Length */}
-                      <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground">Len (Ft)</label>
-                        <input
-                          type="number"
-                          placeholder="Len"
-                          value={item.length || ""}
-                          disabled={item.unit === "Pcs" || item.unit === "Kg"}
-                          onChange={(e) => updateItemRow(idx, "length", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center disabled:opacity-30"
-                        />
-                      </div>
-
-                      {/* Width */}
-                      <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground">Wid (Ft)</label>
-                        <input
-                          type="number"
-                          placeholder="Wid"
-                          value={item.width || ""}
-                          disabled={item.unit !== "Sft" && item.unit !== "Sqft"}
-                          onChange={(e) => updateItemRow(idx, "width", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center disabled:opacity-30"
-                        />
-                      </div>
-
                       {/* Qty */}
                       <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground">Qty</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase font-bold">Qty</label>
                         <input
                           type="number"
                           required
                           value={item.quantity || "1"}
                           onChange={(e) => updateItemRow(idx, "quantity", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center"
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center font-bold"
                         />
                       </div>
 
                       {/* Rate */}
-                      <div className="w-20 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground">Rate (₹)</label>
+                      <div className="w-24 space-y-1 font-mono">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase font-bold">Rate (₹)</label>
                         <input
                           type="number"
                           required
                           value={item.unitPrice || "0"}
                           onChange={(e) => updateItemRow(idx, "unitPrice", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-right"
+                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-right font-bold text-emerald-400"
                         />
                       </div>
 
-                      {/* Amount calculated */}
-                      <div className="w-24 text-right font-bold text-foreground font-mono leading-none pb-2 select-none text-xs">
+                      {/* Total price */}
+                      <div className="w-24 text-right font-bold text-foreground font-mono leading-none pb-2 text-xs">
                         ₹{(item.lineTotal || 0).toLocaleString("en-IN")}
                       </div>
 
+                      {/* Configure Materials (BOM) Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => openBOMConfigurator(idx)}
+                        className="text-[10px] bg-secondary hover:bg-secondary/80 border border-border/80 text-foreground font-bold px-2.5 py-1.5 rounded transition-all shrink-0 mb-0.5 uppercase tracking-wider font-mono hover:text-primary hover:border-primary"
+                      >
+                        BOM
+                      </button>
+
+                      {/* Remove Button */}
                       <button
                         type="button"
                         onClick={() => removeItemRow(idx)}
@@ -1170,6 +1320,130 @@ export default function QuotationsPage() {
                 Draft and Store Quotation
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Bill of Materials (BOM) Configurator Dialog */}
+      {showBomConfigModal && bomShutterIndex !== null && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-border flex justify-between items-center bg-secondary/15">
+              <div>
+                <h3 className="font-heading font-semibold text-sm">Configure Bill of Materials (BOM)</h3>
+                <p className="text-[10px] text-muted-foreground font-mono uppercase mt-0.5">
+                  Internal manufacturing list for Shutter: {formItems[bomShutterIndex]?.shutterName}
+                </p>
+              </div>
+              <button 
+                onClick={() => { setShowBomConfigModal(false); setBomShutterIndex(null); }} 
+                className="text-muted-foreground hover:text-foreground text-xs font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 font-sans text-xs">
+              <div className="bg-secondary/10 p-3.5 rounded-lg border border-border/50 grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-[10px]">
+                <div>
+                  <span className="text-muted-foreground block uppercase">Size</span>
+                  <span className="font-bold text-foreground">{formItems[bomShutterIndex]?.width}Ft x {formItems[bomShutterIndex]?.height}Ft</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block uppercase">Material Spec</span>
+                  <span className="font-bold text-foreground">{formItems[bomShutterIndex]?.material} ({formItems[bomShutterIndex]?.thickness})</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block uppercase">Profile</span>
+                  <span className="font-bold text-foreground">{formItems[bomShutterIndex]?.profile}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block uppercase">Operation</span>
+                  <span className="font-bold text-foreground">{formItems[bomShutterIndex]?.operationType} {formItems[bomShutterIndex]?.motorType && `(${formItems[bomShutterIndex]?.motorType})`}</span>
+                </div>
+              </div>
+
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-secondary/30 border-b border-border font-mono text-[10px] uppercase text-muted-foreground">
+                      <th className="p-2.5">Material Name</th>
+                      <th className="p-2.5">Specification</th>
+                      <th className="p-2.5 text-center w-24">Qty</th>
+                      <th className="p-2.5 text-center w-16">Unit</th>
+                      <th className="p-2.5 text-right w-24">Rate (₹)</th>
+                      <th className="p-2.5 text-right w-28">Total Price (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {editingBomItems.map((bom, bIdx) => (
+                      <tr key={bIdx} className="hover:bg-secondary/10">
+                        <td className="p-2.5 font-bold text-foreground">{bom.materialName}</td>
+                        <td className="p-2.5">
+                          <input
+                            type="text"
+                            value={bom.specification || ""}
+                            onChange={(e) => updateBomItemField(bIdx, "specification", e.target.value)}
+                            className="w-full bg-secondary/20 border border-border/80 rounded px-2 py-0.5 text-xs outline-none text-foreground font-semibold"
+                          />
+                        </td>
+                        <td className="p-2.5 text-center font-mono">
+                          <input
+                            type="number"
+                            step="any"
+                            value={bom.quantity || ""}
+                            onChange={(e) => updateBomItemField(bIdx, "quantity", e.target.value)}
+                            className="w-20 bg-secondary/20 border border-border/80 rounded px-1.5 py-0.5 text-xs text-center outline-none text-foreground font-bold"
+                          />
+                        </td>
+                        <td className="p-2.5 text-center font-mono">
+                          <input
+                            type="text"
+                            value={bom.unit || ""}
+                            onChange={(e) => updateBomItemField(bIdx, "unit", e.target.value)}
+                            className="w-12 bg-secondary/20 border border-border/80 rounded px-1 py-0.5 text-xs text-center outline-none text-foreground font-semibold"
+                          />
+                        </td>
+                        <td className="p-2.5 text-right font-mono">
+                          <input
+                            type="number"
+                            value={bom.rate || ""}
+                            onChange={(e) => updateBomItemField(bIdx, "rate", e.target.value)}
+                            className="w-20 bg-secondary/20 border border-border/80 rounded px-1.5 py-0.5 text-xs text-right outline-none text-foreground font-bold text-emerald-400"
+                          />
+                        </td>
+                        <td className="p-2.5 text-right font-mono font-bold text-foreground">
+                          ₹{(bom.totalPrice || 0).toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-between items-center bg-secondary/5 border border-border/40 p-3 rounded-lg font-mono">
+                <span className="font-bold text-[10px] uppercase text-muted-foreground">Estimated Manufacturing Cost:</span>
+                <span className="font-black text-foreground text-sm">
+                  ₹{editingBomItems.reduce((sum, bom) => sum + (bom.totalPrice || 0), 0).toLocaleString("en-IN")}
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowBomConfigModal(false); setBomShutterIndex(null); }}
+                  className="bg-secondary hover:bg-secondary/80 border border-border text-foreground font-bold px-4 py-2 rounded-lg text-xs"
+                >
+                  Discard overrides
+                </button>
+                <button
+                  type="button"
+                  onClick={saveBOMConfiguration}
+                  className="bg-primary text-primary-foreground hover:bg-primary/95 font-bold px-5 py-2 rounded-lg text-xs shadow-md shadow-primary/20"
+                >
+                  Save Internal BOM
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
