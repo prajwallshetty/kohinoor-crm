@@ -1,0 +1,1464 @@
+{
+  "users": [
+    {
+      "id": "u-1",
+      "email": "owner@kohinoor.com",
+      "name": "Rajesh Kumar (Owner)",
+      "role": "OWNER",
+      "avatarUrl": ""
+    },
+    {
+      "id": "u-2",
+      "email": "accountant@kohinoor.com",
+      "name": "Suresh Mehta (Accountant)",
+      "role": "ACCOUNTANT",
+      "avatarUrl": ""
+    }
+  ],
+  "customers": [
+    {
+      "id": "c-1",
+      "name": "Metro Retailers Ltd",
+      "type": "COMPANY",
+      "email": "procurement@metro.com",
+      "phone": "+91 98765 43210",
+      "gstNumber": "27AAACM1234F1Z5",
+      "billingAddress": "405, Corporate Hub, Bandra West, Mumbai, MH",
+      "shippingAddress": "Warehouse A, Thane, MH"
+    },
+    {
+      "id": "c-2",
+      "name": "Anil Sharma",
+      "type": "INDIVIDUAL",
+      "email": "anil.sharma@gmail.com",
+      "phone": "+91 91234 56789",
+      "gstNumber": "",
+      "billingAddress": "Flat 102, Shanti Niwas, Andheri East, Mumbai, MH",
+      "shippingAddress": ""
+    }
+  ],
+  "sites": [
+    {
+      "id": "s-1",
+      "customerId": "c-1",
+      "address": "Plot 42, GIDC Industrial Estate, Thane, MH",
+      "contactPerson": "Mr. Ramesh (Manager)",
+      "contactPhone": "+91 99999 88888",
+      "notes": "Requires heavy duty industrial shutter. High clearance."
+    },
+    {
+      "id": "s-2",
+      "customerId": "c-2",
+      "address": "Flat 102, Shanti Niwas, Andheri East, Mumbai, MH",
+      "contactPerson": "Anil Sharma",
+      "contactPhone": "+91 91234 56789",
+      "notes": "Residential garage shutter installation."
+    }
+  ],
+  "leads": [
+    {
+      "id": "l-1",
+      "title": "Industrial Shutter - 4 Nos",
+      "customerId": "c-1",
+      "status": "SITE_VISIT",
+      "value": 320000,
+      "notes": "Site inspection scheduled. Needs motor-driven rolling shutters.",
+      "createdAt": "2026-07-14T07:01:45.895Z"
+    },
+    {
+      "id": "l-2",
+      "title": "Residential Garage Shutter",
+      "customerId": "c-2",
+      "status": "WON",
+      "value": 75000,
+      "notes": "Measurement taken. Quotation sent to customer for approval.",
+      "createdAt": "2026-07-16T07:01:45.895Z",
+      "updatedAt": "2026-07-19T12:35:19.752Z"
+    },
+    {
+      "id": "l-3",
+      "title": "Showroom Security Shutter",
+      "customerId": "c-1",
+      "status": "LOST",
+      "value": 120000,
+      "notes": "Received inbound query for retail mall outlet.",
+      "createdAt": "2026-07-17T07:01:45.895Z",
+      "updatedAt": "2026-07-19T12:35:29.769Z"
+    }
+  ],
+  "measurements": [
+    {
+      "id": "m-1",
+      "leadId": "l-1",
+      "width": 4500,
+      "height": 3800,
+      "shutterType": "Galvanized Steel Slat (1.2mm)",
+      "motor": "Somfy 120Nm Motorised",
+      "color": "Slate Grey",
+      "photos": "/uploads/shutter1.jpg",
+      "drawing": "",
+      "notes": "Requires side guides reinforcement due to wind load."
+    },
+    {
+      "id": "m-2",
+      "leadId": "l-2",
+      "width": 2800,
+      "height": 2400,
+      "shutterType": "Polycarbonate Transparent Slat",
+      "motor": "Generic 40Nm Motorised",
+      "color": "Clear / Natural",
+      "photos": "",
+      "drawing": "",
+      "notes": "Standard single phase connection nearby."
+    }
+  ],
+  "quotations": [
+    {
+      "id": "q-1",
+      "quoteNumber": "QT-2026-0001",
+      "customerId": "c-1",
+      "leadId": "l-1",
+      "status": "APPROVED",
+      "discount": 5,
+      "gstRate": 18,
+      "gstAmount": 54720,
+      "totalAmount": 358720,
+      "terms": "50% advance, balance on installation. 2 years warranty on motor.",
+      "version": 1,
+      "createdAt": "2026-07-15T07:01:45.895Z",
+      "updatedAt": "2026-07-19T20:36:21.301Z"
+    },
+    {
+      "id": "q-2",
+      "quoteNumber": "QT-2026-0002",
+      "customerId": "c-2",
+      "leadId": "l-2",
+      "status": "APPROVED",
+      "discount": 0,
+      "gstRate": 18,
+      "gstAmount": 13500,
+      "totalAmount": 88500,
+      "terms": "100% advance. 1 year warranty.",
+      "version": 2,
+      "parentQuoteId": "q-2-v1",
+      "createdAt": "2026-07-16T07:01:45.895Z"
+    },
+    {
+      "id": "q-1784303470492",
+      "quoteNumber": "QT-2026-1796",
+      "customerId": "c-1",
+      "leadId": null,
+      "status": "DRAFT",
+      "discount": 0,
+      "gstRate": 18,
+      "gstAmount": 8640,
+      "totalAmount": 56640,
+      "terms": "1. Valid for 30 days.\n2. 50% advance, balance before delivery.\n3. Standard 2-year warranty on drive motor components.",
+      "version": 1,
+      "parentQuoteId": null,
+      "createdAt": "2026-07-17T15:51:10.492Z",
+      "updatedAt": "2026-07-17T15:51:10.492Z"
+    },
+    {
+      "id": "q-1784305353183",
+      "quoteNumber": "QT-2026-1638",
+      "customerId": "c-1",
+      "leadId": null,
+      "status": "DRAFT",
+      "discount": 0,
+      "gstRate": 18,
+      "gstAmount": 0,
+      "totalAmount": 102500,
+      "terms": "1. Valid for 30 days.\n2. 50% advance, balance before delivery.\n3. Standard 2-year warranty on drive motor components.",
+      "version": 1,
+      "parentQuoteId": null,
+      "createdAt": "2026-07-17T16:22:33.183Z",
+      "updatedAt": "2026-07-17T16:22:33.183Z"
+    },
+    {
+      "id": "q-1784305378153",
+      "quoteNumber": "QT-2026-0001-R1",
+      "customerId": "c-1",
+      "leadId": "l-1",
+      "status": "DRAFT",
+      "discount": 5,
+      "gstRate": 18,
+      "gstAmount": 54720,
+      "totalAmount": 358720,
+      "terms": "50% advance, balance on installation. 2 years warranty on motor.",
+      "version": 2,
+      "parentQuoteId": "q-1",
+      "createdAt": "2026-07-17T16:22:58.153Z",
+      "updatedAt": "2026-07-17T16:22:58.153Z"
+    },
+    {
+      "id": "q-1784305378286",
+      "quoteNumber": "QT-2026-0001-R2",
+      "customerId": "c-1",
+      "leadId": "l-1",
+      "status": "DRAFT",
+      "discount": 5,
+      "gstRate": 18,
+      "gstAmount": 54720,
+      "totalAmount": 358720,
+      "terms": "50% advance, balance on installation. 2 years warranty on motor.",
+      "version": 2,
+      "parentQuoteId": "q-1",
+      "createdAt": "2026-07-17T16:22:58.286Z",
+      "updatedAt": "2026-07-17T16:22:58.286Z"
+    },
+    {
+      "id": "q-1784446452073",
+      "quoteNumber": "QT-2026-3554 (Copy)",
+      "customerId": "c-1",
+      "leadId": "l-1",
+      "status": "DRAFT",
+      "discount": 5,
+      "gstRate": 18,
+      "gstAmount": 54720,
+      "totalAmount": 358720,
+      "terms": "50% advance, balance on installation. 2 years warranty on motor.",
+      "version": 1,
+      "parentQuoteId": null,
+      "createdAt": "2026-07-19T07:34:12.073Z",
+      "updatedAt": "2026-07-19T07:34:12.073Z"
+    },
+    {
+      "id": "q-1784446452073",
+      "quoteNumber": "QT-2026-8210 (Copy)",
+      "customerId": "c-1",
+      "leadId": "l-1",
+      "status": "DRAFT",
+      "discount": 5,
+      "gstRate": 18,
+      "gstAmount": 54720,
+      "totalAmount": 358720,
+      "terms": "50% advance, balance on installation. 2 years warranty on motor.",
+      "version": 1,
+      "parentQuoteId": null,
+      "createdAt": "2026-07-19T07:34:12.073Z",
+      "updatedAt": "2026-07-19T07:34:12.073Z"
+    },
+    {
+      "id": "q-1784446452073",
+      "quoteNumber": "QT-2026-4804 (Copy)",
+      "customerId": "c-1",
+      "leadId": "l-1",
+      "status": "DRAFT",
+      "discount": 5,
+      "gstRate": 18,
+      "gstAmount": 54720,
+      "totalAmount": 358720,
+      "terms": "50% advance, balance on installation. 2 years warranty on motor.",
+      "version": 1,
+      "parentQuoteId": null,
+      "createdAt": "2026-07-19T07:34:12.073Z",
+      "updatedAt": "2026-07-19T07:34:12.073Z"
+    },
+    {
+      "id": "q-1784446452072",
+      "quoteNumber": "QT-2026-9163 (Copy)",
+      "customerId": "c-1",
+      "leadId": "l-1",
+      "status": "DRAFT",
+      "discount": 5,
+      "gstRate": 18,
+      "gstAmount": 54720,
+      "totalAmount": 358720,
+      "terms": "50% advance, balance on installation. 2 years warranty on motor.",
+      "version": 1,
+      "parentQuoteId": null,
+      "createdAt": "2026-07-19T07:34:12.072Z",
+      "updatedAt": "2026-07-19T07:34:12.072Z"
+    },
+    {
+      "id": "q-1784493119178",
+      "quoteNumber": "QT-2026-4371",
+      "customerId": "c-1",
+      "leadId": null,
+      "status": "SENT",
+      "discount": -4,
+      "gstRate": 0,
+      "gstAmount": 0,
+      "totalAmount": 4,
+      "terms": "1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client.",
+      "version": 1,
+      "parentQuoteId": null,
+      "createdAt": "2026-07-19T20:31:59.178Z",
+      "updatedAt": "2026-07-19T20:31:59.178Z"
+    },
+    {
+      "id": "q-1784493559467",
+      "quoteNumber": "QT-2026-1075 (Copy)",
+      "customerId": "c-1",
+      "leadId": "l-1",
+      "status": "DRAFT",
+      "discount": 5,
+      "gstRate": 18,
+      "gstAmount": 54720,
+      "totalAmount": 358720,
+      "terms": "50% advance, balance on installation. 2 years warranty on motor.",
+      "version": 1,
+      "parentQuoteId": null,
+      "createdAt": "2026-07-19T20:39:19.467Z",
+      "updatedAt": "2026-07-19T20:39:19.467Z"
+    }
+  ],
+  "quotationItems": [
+    {
+      "id": "qi-1",
+      "quotationId": "q-1",
+      "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
+      "quantity": 4,
+      "unitPrice": 70000,
+      "lineTotal": 280000
+    },
+    {
+      "id": "qi-2",
+      "quotationId": "q-1",
+      "productName": "Somfy Shutter Motor 120Nm",
+      "quantity": 4,
+      "unitPrice": 12000,
+      "lineTotal": 48000
+    },
+    {
+      "id": "qi-3",
+      "quotationId": "q-2",
+      "productName": "Polycarbonate Clear Rolling Shutter (2800x2400)",
+      "quantity": 1,
+      "unitPrice": 65000,
+      "lineTotal": 65000
+    },
+    {
+      "id": "qi-4",
+      "quotationId": "q-2",
+      "productName": "Generic Shutter Motor 40Nm",
+      "quantity": 1,
+      "unitPrice": 10000,
+      "lineTotal": 10000
+    },
+    {
+      "id": "qi-1784303470495-0",
+      "quotationId": "q-1784303470492",
+      "productName": "Insulated Aluminum Slat (77mm, Silver)",
+      "quantity": 1,
+      "unitPrice": 48000,
+      "lineTotal": 48000
+    },
+    {
+      "id": "qi-1784305354086-0",
+      "quotationId": "q-1784305353183",
+      "productName": "Insulated Aluminum Slat (77mm, Silver)",
+      "quantity": 2,
+      "unitPrice": 48000,
+      "lineTotal": 96000
+    },
+    {
+      "id": "qi-1784305354086-1",
+      "quotationId": "q-1784305353183",
+      "productName": "Heavy Duty Guide Rails (Pair)",
+      "quantity": 1,
+      "unitPrice": 6500,
+      "lineTotal": 6500
+    },
+    {
+      "id": "qi-1784305378153-0",
+      "quotationId": "q-1784305378153",
+      "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
+      "quantity": 4,
+      "unitPrice": 70000,
+      "lineTotal": 280000
+    },
+    {
+      "id": "qi-1784305378153-1",
+      "quotationId": "q-1784305378153",
+      "productName": "Somfy Shutter Motor 120Nm",
+      "quantity": 4,
+      "unitPrice": 12000,
+      "lineTotal": 48000
+    },
+    {
+      "id": "qi-1784305378286-0",
+      "quotationId": "q-1784305378286",
+      "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
+      "quantity": 4,
+      "unitPrice": 70000,
+      "lineTotal": 280000
+    },
+    {
+      "id": "qi-1784305378286-1",
+      "quotationId": "q-1784305378286",
+      "productName": "Somfy Shutter Motor 120Nm",
+      "quantity": 4,
+      "unitPrice": 12000,
+      "lineTotal": 48000
+    },
+    {
+      "id": "qi-1784446452087-0",
+      "quotationId": "q-1784446452073",
+      "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
+      "quantity": 4,
+      "unitPrice": 70000,
+      "lineTotal": 280000
+    },
+    {
+      "id": "qi-1784446452087-1",
+      "quotationId": "q-1784446452073",
+      "productName": "Somfy Shutter Motor 120Nm",
+      "quantity": 4,
+      "unitPrice": 12000,
+      "lineTotal": 48000
+    },
+    {
+      "id": "qi-1784446452095-0",
+      "quotationId": "q-1784446452073",
+      "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
+      "quantity": 4,
+      "unitPrice": 70000,
+      "lineTotal": 280000
+    },
+    {
+      "id": "qi-1784446452095-1",
+      "quotationId": "q-1784446452073",
+      "productName": "Somfy Shutter Motor 120Nm",
+      "quantity": 4,
+      "unitPrice": 12000,
+      "lineTotal": 48000
+    },
+    {
+      "id": "qi-1784446454506-0",
+      "quotationId": "q-1784446452073",
+      "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
+      "quantity": 4,
+      "unitPrice": 70000,
+      "lineTotal": 280000
+    },
+    {
+      "id": "qi-1784446454506-1",
+      "quotationId": "q-1784446452073",
+      "productName": "Somfy Shutter Motor 120Nm",
+      "quantity": 4,
+      "unitPrice": 12000,
+      "lineTotal": 48000
+    },
+    {
+      "id": "qi-1784446456526-0",
+      "quotationId": "q-1784446452072",
+      "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
+      "quantity": 4,
+      "unitPrice": 70000,
+      "lineTotal": 280000
+    },
+    {
+      "id": "qi-1784446456526-1",
+      "quotationId": "q-1784446452072",
+      "productName": "Somfy Shutter Motor 120Nm",
+      "quantity": 4,
+      "unitPrice": 12000,
+      "lineTotal": 48000
+    },
+    {
+      "id": "qi-1784493120254-0",
+      "quotationId": "q-1784493119178",
+      "productName": "Pipes (1\")",
+      "materialCategory": "Pipes",
+      "material": "1\"",
+      "thickness": null,
+      "profile": null,
+      "length": 0,
+      "width": 0,
+      "quantity": 1,
+      "unitPrice": 120,
+      "lineTotal": 0
+    },
+    {
+      "id": "qi-1784493559468-0",
+      "quotationId": "q-1784493559467",
+      "productName": "Galvanized Steel Rolling Shutter (4500x3800)",
+      "materialCategory": null,
+      "material": null,
+      "thickness": null,
+      "profile": null,
+      "length": null,
+      "width": null,
+      "quantity": 4,
+      "unitPrice": 70000,
+      "lineTotal": 280000
+    },
+    {
+      "id": "qi-1784493559468-1",
+      "quotationId": "q-1784493559467",
+      "productName": "Somfy Shutter Motor 120Nm",
+      "materialCategory": null,
+      "material": null,
+      "thickness": null,
+      "profile": null,
+      "length": null,
+      "width": null,
+      "quantity": 4,
+      "unitPrice": 12000,
+      "lineTotal": 48000
+    }
+  ],
+  "invoices": [
+    {
+      "id": "i-1",
+      "invoiceNumber": "INV-2026-0001",
+      "quotationId": "q-2",
+      "customerId": "c-2",
+      "status": "PARTIAL",
+      "amountPaid": 40000,
+      "totalAmount": 88500,
+      "discount": 0,
+      "gstRate": 18,
+      "gstAmount": 13500,
+      "paymentDue": "2026-07-27T07:01:45.895Z",
+      "terms": "Thank you for your business.",
+      "createdAt": "2026-07-16T19:01:45.895Z"
+    }
+  ],
+  "payments": [
+    {
+      "id": "p-1",
+      "invoiceId": "i-1",
+      "amount": 40000,
+      "paymentType": "ADVANCE",
+      "paymentMethod": "UPI",
+      "transactionRef": "UPI9827341203",
+      "createdAt": "2026-07-16T19:01:45.895Z"
+    }
+  ],
+  "installationJobs": [
+    {
+      "id": "j-1",
+      "quotationId": "q-2",
+      "invoiceId": "i-1",
+      "technicianName": "Mahesh Singh",
+      "status": "PENDING",
+      "scheduledDate": "2026-07-19T07:01:45.895Z",
+      "photos": "",
+      "signatureUrl": "",
+      "notes": "Bring extra guide brackets. Site access after 10 AM.",
+      "createdAt": "2026-07-16T19:01:45.895Z"
+    }
+  ],
+  "inventoryItems": [
+    {
+      "id": "inv-1",
+      "category": "SLATS",
+      "name": "Galvanized Steel Slat (1.2mm, Silver)",
+      "sku": "SLT-GS-1.2-SV",
+      "stockQty": 120,
+      "minStockQty": 30,
+      "unitPrice": 450
+    },
+    {
+      "id": "inv-2",
+      "category": "SLATS",
+      "name": "Polycarbonate Transparent Slat",
+      "sku": "SLT-PC-CLR-01",
+      "stockQty": 15,
+      "minStockQty": 25,
+      "unitPrice": 1200
+    },
+    {
+      "id": "inv-3",
+      "category": "MOTORS",
+      "name": "Somfy motor 120Nm 230V",
+      "sku": "MTR-SMF-120NM",
+      "stockQty": 8,
+      "minStockQty": 3,
+      "unitPrice": 9500
+    },
+    {
+      "id": "inv-4",
+      "category": "MOTORS",
+      "name": "Generic motor 40Nm 230V",
+      "sku": "MTR-GEN-40NM",
+      "stockQty": 2,
+      "minStockQty": 5,
+      "unitPrice": 6200
+    },
+    {
+      "id": "inv-5",
+      "category": "REMOTE",
+      "name": "Somfy Telis 4 Channel Remote",
+      "sku": "RMT-SMF-T04",
+      "stockQty": 24,
+      "minStockQty": 10,
+      "unitPrice": 1800
+    },
+    {
+      "id": "inv-6",
+      "category": "GUIDE_RAILS",
+      "name": "Heavy Duty Shutter Guide Channel (U-Shape)",
+      "sku": "GD-HD-U100",
+      "stockQty": 40,
+      "minStockQty": 15,
+      "unitPrice": 1100
+    }
+  ],
+  "warranties": [
+    {
+      "id": "w-1",
+      "customerId": "c-2",
+      "invoiceId": "i-1",
+      "shutterSerial": "SH-PC-2026-9812",
+      "warrantyPeriodMonths": 24,
+      "expiryDate": "2028-07-06T07:01:45.895Z",
+      "status": "ACTIVE",
+      "serviceHistoryJson": "[]",
+      "createdAt": "2026-07-16T19:01:45.895Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "al-1784493559470",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_CREATE",
+      "details": "Created quotation number: QT-2026-1075 (Copy)",
+      "timestamp": "2026-07-19T20:39:19.469Z"
+    },
+    {
+      "id": "al-1784464530092",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to LOST",
+      "timestamp": "2026-07-19T12:35:29.771Z"
+    },
+    {
+      "id": "al-1784464527721",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to QUOTATION",
+      "timestamp": "2026-07-19T12:35:27.346Z"
+    },
+    {
+      "id": "al-1784464520069",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-2 to WON",
+      "timestamp": "2026-07-19T12:35:19.755Z"
+    },
+    {
+      "id": "al-1784464519848",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-2 to QUOTATION",
+      "timestamp": "2026-07-19T12:35:19.488Z"
+    },
+    {
+      "id": "al-1784446968884",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-2 to MEASUREMENT",
+      "timestamp": "2026-07-19T07:42:48.460Z"
+    },
+    {
+      "id": "al-1784446966270",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to WON",
+      "timestamp": "2026-07-19T07:42:46.022Z"
+    },
+    {
+      "id": "al-1784446964943",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to LOST",
+      "timestamp": "2026-07-19T07:42:44.692Z"
+    },
+    {
+      "id": "al-1784446963483",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to WON",
+      "timestamp": "2026-07-19T07:42:43.185Z"
+    },
+    {
+      "id": "al-1784446962096",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to NEGOTIATION",
+      "timestamp": "2026-07-19T07:42:41.829Z"
+    },
+    {
+      "id": "al-1784446954667",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to QUOTATION",
+      "timestamp": "2026-07-19T07:42:34.409Z"
+    },
+    {
+      "id": "al-1784446952290",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to NEW",
+      "timestamp": "2026-07-19T07:42:32.052Z"
+    },
+    {
+      "id": "al-1784446457052",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_CREATE",
+      "details": "Created quotation number: QT-2026-9163 (Copy)",
+      "timestamp": "2026-07-19T07:34:16.526Z"
+    },
+    {
+      "id": "al-1784446455610",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_CREATE",
+      "details": "Created quotation number: QT-2026-4804 (Copy)",
+      "timestamp": "2026-07-19T07:34:14.506Z"
+    },
+    {
+      "id": "al-1784446452898",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_CREATE",
+      "details": "Created quotation number: QT-2026-8210 (Copy)",
+      "timestamp": "2026-07-19T07:34:12.095Z"
+    },
+    {
+      "id": "al-1784446452896",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_CREATE",
+      "details": "Created quotation number: QT-2026-3554 (Copy)",
+      "timestamp": "2026-07-19T07:34:12.088Z"
+    },
+    {
+      "id": "al-1784305396584",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to CONTACTED",
+      "timestamp": "2026-07-17T16:23:16.583Z"
+    },
+    {
+      "id": "al-1784305394498",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to CONTACTED",
+      "timestamp": "2026-07-17T16:23:14.202Z"
+    },
+    {
+      "id": "al-1784305394465",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LEAD_STATUS",
+      "details": "Moved Lead l-3 to NEW",
+      "timestamp": "2026-07-17T16:23:14.157Z"
+    },
+    {
+      "id": "al-1784305378854",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_REVISION",
+      "details": "Created revision QT-2026-0001-R2 for QT-2026-0001",
+      "timestamp": "2026-07-17T16:22:58.287Z"
+    },
+    {
+      "id": "al-1784305378575",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_REVISION",
+      "details": "Created revision QT-2026-0001-R1 for QT-2026-0001",
+      "timestamp": "2026-07-17T16:22:58.153Z"
+    },
+    {
+      "id": "al-1784305354436",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_CREATE",
+      "details": "Created quotation number: QT-2026-1638",
+      "timestamp": "2026-07-17T16:22:34.086Z"
+    },
+    {
+      "id": "al-1784303470500",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_CREATE",
+      "details": "Created quotation number: QT-2026-1796",
+      "timestamp": "2026-07-17T15:51:10.498Z"
+    },
+    {
+      "id": "al-1784303268849",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "ROLE_SWITCH",
+      "details": "Switched active role view to OWNER",
+      "timestamp": "2026-07-17T15:47:43.830Z"
+    },
+    {
+      "id": "al-1784303265204",
+      "userId": "u-1",
+      "userEmail": "accountant@kohinoor.com",
+      "action": "ROLE_SWITCH",
+      "details": "Switched active role view to ACCOUNTANT",
+      "timestamp": "2026-07-17T15:47:40.176Z"
+    },
+    {
+      "id": "al-1784271743301",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LOGIN",
+      "details": "User logged in as OWNER",
+      "timestamp": "2026-07-17T07:02:22.730Z"
+    },
+    {
+      "id": "al-1784271711568",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LOGIN",
+      "details": "User logged in as OWNER",
+      "timestamp": "2026-07-17T07:01:51.568Z"
+    },
+    {
+      "id": "al-1784271705955",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LOGIN",
+      "details": "User logged in as OWNER",
+      "timestamp": "2026-07-17T07:01:45.953Z"
+    },
+    {
+      "id": "al-1",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "LOGIN",
+      "details": "User logged in from browser.",
+      "timestamp": "2026-07-16T07:01:45.895Z"
+    },
+    {
+      "id": "al-2",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_CREATE",
+      "details": "Created quotation QT-2026-0001",
+      "timestamp": "2026-07-15T07:01:45.895Z"
+    }
+  ],
+  "companyBranding": {
+    "id": "cb-1",
+    "companyName": "Kohinoor Shutter Industries",
+    "logoUrl": "/logo-placeholder.png",
+    "gstNumber": "27AAACK5912K1Z9",
+    "bankName": "State Bank of India",
+    "bankAccountNo": "38927103829",
+    "bankIfsc": "SBIN0004561",
+    "invoiceTerms": "1. Goods once sold will not be taken back.\n2. Interest @ 18% will be charged if payment is not made within due date.\n3. Warranty claims must represent valid manufacturing defects.",
+    "quotationTerms": "1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client."
+  },
+  "storageQuota": {
+    "id": "sq-1",
+    "totalQuotaBytes": 10737418240,
+    "usedBytes": 1556925644.8
+  },
+  "masterItems": [
+    {
+      "id": "mi-0",
+      "category": "Material Categories",
+      "name": "GI Sheet",
+      "rate": 20,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:29.189Z"
+    },
+    {
+      "id": "mi-1",
+      "category": "Material Categories",
+      "name": "Pipes",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-2",
+      "category": "Material Categories",
+      "name": "Springs",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-3",
+      "category": "Material Categories",
+      "name": "Brackets",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-4",
+      "category": "Material Categories",
+      "name": "Wheels",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-5",
+      "category": "Material Categories",
+      "name": "Guides",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-6",
+      "category": "Material Categories",
+      "name": "Kabadi",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-7",
+      "category": "Material Categories",
+      "name": "Top Caps",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-8",
+      "category": "Material Categories",
+      "name": "Handles",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-9",
+      "category": "Material Categories",
+      "name": "Locks",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-10",
+      "category": "Material Categories",
+      "name": "Fittings",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-11",
+      "category": "Material Types",
+      "name": "GI",
+      "rate": 85,
+      "unit": "Sft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-12",
+      "category": "Material Types",
+      "name": "ZN",
+      "rate": 95,
+      "unit": "Sft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-13",
+      "category": "Material Types",
+      "name": "PPGI",
+      "rate": 110,
+      "unit": "Sft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-14",
+      "category": "Thickness",
+      "name": "18G",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-15",
+      "category": "Thickness",
+      "name": "20G",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-16",
+      "category": "Thickness",
+      "name": "21G",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-17",
+      "category": "Thickness",
+      "name": "22G",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-18",
+      "category": "Thickness",
+      "name": "24G",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-19",
+      "category": "Profiles",
+      "name": "Flat",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-20",
+      "category": "Profiles",
+      "name": "Semi",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-21",
+      "category": "Profiles",
+      "name": "Half Round",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-22",
+      "category": "Profiles",
+      "name": "Round",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-23",
+      "category": "Springs",
+      "name": "SPR 4G",
+      "rate": 1200,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-24",
+      "category": "Springs",
+      "name": "SPR 5G",
+      "rate": 1500,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-25",
+      "category": "Springs",
+      "name": "SPR 6G",
+      "rate": 1800,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-26",
+      "category": "Springs",
+      "name": "SPR 7G",
+      "rate": 2200,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-27",
+      "category": "Springs",
+      "name": "SPR 8G",
+      "rate": 2600,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-28",
+      "category": "Brackets",
+      "name": "13/16",
+      "rate": 350,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-29",
+      "category": "Brackets",
+      "name": "12MS",
+      "rate": 450,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-30",
+      "category": "Brackets",
+      "name": "16MS",
+      "rate": 600,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-31",
+      "category": "Brackets",
+      "name": "Heavy",
+      "rate": 800,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-32",
+      "category": "Wheels",
+      "name": "8\"",
+      "rate": 250,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-33",
+      "category": "Wheels",
+      "name": "1¼\"",
+      "rate": 150,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-34",
+      "category": "Wheels",
+      "name": "1½\"",
+      "rate": 180,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-35",
+      "category": "Wheels",
+      "name": "2\"",
+      "rate": 220,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-36",
+      "category": "Pipes",
+      "name": "1\"",
+      "rate": 120,
+      "unit": "Rft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-37",
+      "category": "Pipes",
+      "name": "1¼\"",
+      "rate": 160,
+      "unit": "Rft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-38",
+      "category": "Pipes",
+      "name": "1½\"",
+      "rate": 200,
+      "unit": "Rft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-39",
+      "category": "Pipes",
+      "name": "2\"",
+      "rate": 260,
+      "unit": "Rft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-40",
+      "category": "Pipes",
+      "name": "2½\"",
+      "rate": 320,
+      "unit": "Rft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-41",
+      "category": "Pipes",
+      "name": "3\"",
+      "rate": 400,
+      "unit": "Rft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-42",
+      "category": "Guides",
+      "name": "GC",
+      "rate": 180,
+      "unit": "Rft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-43",
+      "category": "Guides",
+      "name": "standard",
+      "rate": 150,
+      "unit": "Rft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-44",
+      "category": "Guides",
+      "name": "heavy",
+      "rate": 220,
+      "unit": "Rft",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-45",
+      "category": "Kabadi",
+      "name": "GI Flat",
+      "rate": 90,
+      "unit": "Kg",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-46",
+      "category": "Top Caps",
+      "name": "3\"",
+      "rate": 80,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-47",
+      "category": "Top Caps",
+      "name": "4\"",
+      "rate": 100,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-48",
+      "category": "Top Caps",
+      "name": "5\"",
+      "rate": 130,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-49",
+      "category": "Top Caps",
+      "name": "6\"",
+      "rate": 160,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-50",
+      "category": "Handles",
+      "name": "MS",
+      "rate": 50,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-51",
+      "category": "Handles",
+      "name": "SS",
+      "rate": 120,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-52",
+      "category": "Handles",
+      "name": "Heavy",
+      "rate": 180,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-53",
+      "category": "Locks",
+      "name": "Standard",
+      "rate": 250,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-54",
+      "category": "Locks",
+      "name": "Heavy",
+      "rate": 450,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-55",
+      "category": "Locks",
+      "name": "SS",
+      "rate": 600,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-56",
+      "category": "Fittings",
+      "name": "Basic",
+      "rate": 1000,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-57",
+      "category": "Fittings",
+      "name": "Premium",
+      "rate": 2500,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    },
+    {
+      "id": "mi-58",
+      "category": "Fittings",
+      "name": "Heavy",
+      "rate": 4000,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-19T20:30:13.609Z",
+      "updatedAt": "2026-07-19T20:30:13.609Z"
+    }
+  ]
+}

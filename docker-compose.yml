@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: crm-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: crm_password_2026
+      POSTGRES_DB: rolling_shutter_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crm-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:crm_password_2026@postgres:5432/rolling_shutter_crm?schema=public
+      - NEXTAUTH_SECRET=kohinoor-crm-secret-2026
+      - NEXTAUTH_URL=http://localhost:3000
+    depends_on:
+      - postgres
+    volumes:
+      # Mount the prisma directory so the mock-db.json is persisted locally if running without PostgreSQL!
+      - ./prisma:/app/prisma
+
+volumes:
+  postgres_data:

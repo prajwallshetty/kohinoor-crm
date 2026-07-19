@@ -1,0 +1,249 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+enum CustomerType {
+  COMPANY
+  INDIVIDUAL
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  SITE_VISIT
+  MEASUREMENT
+  QUOTATION
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+enum PaymentType {
+  ADVANCE
+  PARTIAL
+  FULL
+  REMAINING
+}
+
+enum PaymentMethod {
+  UPI
+  CASH
+  BANK
+  CHEQUE
+}
+
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Customer {
+  id                 String       @id @default(uuid())
+  name               String
+  companyName        String?
+  type               CustomerType @default(INDIVIDUAL)
+  email              String?
+  phone              String
+  whatsapp           String?
+  gstNumber          String?
+  billingAddress     String
+  shippingAddress    String?
+  notes              String?
+  contactHistoryJson String?
+  attachmentsJson    String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  
+  sites              Site[]
+  leads              Lead[]
+  quotations         Quotation[]
+  invoices           Invoice[]
+}
+
+model Site {
+  id            String   @id @default(uuid())
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  address       String
+  contactPerson String?
+  contactPhone  String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Lead {
+  id           String        @id @default(uuid())
+  title        String
+  customerId   String
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  status       LeadStatus    @default(NEW)
+  value        Float         @default(0.0)
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  measurements Measurement[]
+  quotations   Quotation[]
+}
+
+model Measurement {
+  id          String   @id @default(uuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  width       Float    // in mm or inches
+  height      Float    // in mm or inches
+  shutterType String   // Aluminum Slat, Polycarbonate, Galvanized Steel, etc.
+  material    String?  // Material specs
+  pipe        String?  // Pipe diameter/gauge
+  spring      String?  // Spring type/qty
+  guide       String?  // Guide rail spec
+  motor       String   // Somfy, Generic 40Nm, Manual, etc.
+  color       String
+  photos      String?  // Comma-separated or JSON list of urls
+  drawing     String?  // Base64 or URL of sketch drawing
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Quotation {
+  id            String          @id @default(uuid())
+  quoteNumber   String          @unique
+  customerId    String
+  customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  leadId        String?
+  lead          Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  status        QuoteStatus     @default(DRAFT)
+  discount      Float           @default(0.0)
+  gstRate       Float           @default(18.0) // standard 18% GST
+  gstAmount     Float           @default(0.0)
+  totalAmount   Float           @default(0.0)
+  terms         String?
+  version       Int             @default(1)
+  parentQuoteId String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  
+  items         QuotationItem[]
+  invoices      Invoice[]
+}
+
+model QuotationItem {
+  id               String    @id @default(uuid())
+  quotationId      String
+  quotation        Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  productName      String
+  materialCategory String?
+  material         String?
+  thickness        String?
+  profile          String?
+  length           Float?
+  width            Float?
+  quantity         Int       @default(1)
+  unitPrice        Float
+  lineTotal        Float
+}
+
+model Invoice {
+  id            String            @id @default(uuid())
+  invoiceNumber String            @unique
+  quotationId   String?
+  quotation     Quotation?        @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  customerId    String
+  customer      Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  status        InvoiceStatus     @default(PENDING)
+  amountPaid    Float             @default(0.0)
+  totalAmount   Float             @default(0.0)
+  discount      Float             @default(0.0)
+  gstRate       Float             @default(18.0)
+  gstAmount     Float             @default(0.0)
+  paymentDue    DateTime?
+  terms         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  
+  payments      Payment[]
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  invoiceId      String
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount         Float
+  paymentType    PaymentType   @default(ADVANCE)
+  paymentMethod  PaymentMethod @default(UPI)
+  transactionRef String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  userEmail String?
+  action    String
+  details   String
+  timestamp DateTime @default(now())
+}
+
+model CompanyBranding {
+  id             String   @id @default(uuid())
+  companyName    String   @default("Kohinoor Shutters")
+  logoUrl        String?
+  gstNumber      String?
+  bankName       String?
+  bankAccountNo  String?
+  bankIfsc       String?
+  invoiceTerms   String?
+  quotationTerms String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model StorageQuota {
+  id              String   @id @default(uuid())
+  totalQuotaBytes Float    @default(10737418240) // 10 GB default
+  usedBytes       Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model MasterItem {
+  id         String   @id @default(uuid())
+  category   String   // e.g. "Thickness", "Spring", etc.
+  name       String
+  rate       Float    @default(0.0)
+  unit       String   @default("Pcs")
+  isDisabled Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([category, name])
+}
