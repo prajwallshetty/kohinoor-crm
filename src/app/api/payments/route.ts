@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { DataService } from "@/lib/data-service";
 
 export async function GET() {
-  const payments = await DataService.getPayments();
-  return NextResponse.json(payments);
+  try {
+    const payments = await DataService.getPayments();
+    return NextResponse.json(payments);
+  } catch (e) {
+    return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {

@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { DataService } from "@/lib/data-service";
 
 export async function GET() {
-  const branding = await DataService.getCompanyBranding();
-  return NextResponse.json(branding);
+  try {
+    const branding = await DataService.getCompanyBranding();
+    return NextResponse.json(branding);
+  } catch (e) {
+    return NextResponse.json({ error: "Failed to fetch company branding" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {

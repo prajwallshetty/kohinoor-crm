@@ -55,15 +55,10 @@ export default function CustomersPage() {
   const [custBilling, setCustBilling] = useState("");
   const [custShipping, setCustShipping] = useState("");
 
-  // Add Site Form state
   const [showAddSite, setShowAddSite] = useState(false);
-  const [siteAddress, setSiteAddress] = useState("");
-  const [siteContactPerson, setSiteContactPerson] = useState("");
-  const [siteContactPhone, setSiteContactPhone] = useState("");
-  const [siteNotes, setSiteNotes] = useState("");
 
   // Customer Tabs
-  const [activeTab, setActiveTab] = useState<"sites" | "balance" | "quotations" | "invoices" | "payments">("sites");
+  const [activeTab, setActiveTab] = useState<"balance" | "quotations" | "invoices" | "payments">("quotations");
   const [customerNotes, setCustomerNotes] = useState("");
 
   // Notification state
@@ -167,45 +162,6 @@ export default function CustomersPage() {
     } catch (e) {}
   };
 
-  const handleAddSite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCustomer) return;
-    if (!siteAddress) {
-      alert("Site address is required.");
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/customers/${selectedCustomer.id}/site`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: siteAddress,
-          contactPerson: siteContactPerson,
-          contactPhone: siteContactPhone,
-          notes: siteNotes
-        })
-      });
-
-      if (res.ok) {
-        setNotification("Site address successfully added!");
-        setTimeout(() => setNotification(""), 3000);
-        setSiteAddress("");
-        setSiteContactPerson("");
-        setSiteContactPhone("");
-        setSiteNotes("");
-        setShowAddSite(false);
-        
-        const updatedRes = await fetch("/api/customers");
-        if (updatedRes.ok) {
-          const data = await updatedRes.json();
-          setCustomers(data);
-          const found = data.find((c: Customer) => c.id === selectedCustomer.id);
-          if (found) setSelectedCustomer(found);
-        }
-      }
-    } catch (e) {}
-  };
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -383,15 +339,6 @@ export default function CustomersPage() {
               {/* Tab Buttons */}
               <div className="flex border-b border-border/60 overflow-x-auto select-none no-scrollbar">
                 <button
-                  onClick={() => setActiveTab("sites")}
-                  className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
-                    activeTab === "sites" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span>Sites ({selectedCustomer.sites?.length || 0})</span>
-                </button>
-                <button
                   onClick={() => setActiveTab("quotations")}
                   className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
                     activeTab === "quotations" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
@@ -431,53 +378,6 @@ export default function CustomersPage() {
 
               {/* Tab Content Panels */}
               <div className="pt-2">
-                {/* 1. SITES TAB */}
-                {activeTab === "sites" && (
-                  <div className="flex flex-col gap-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                        Linked Sites
-                      </h3>
-                      <button
-                        onClick={() => setShowAddSite(true)}
-                        className="border border-border bg-secondary/50 hover:bg-secondary text-[11px] font-semibold py-1.5 px-3 rounded-md flex items-center gap-1.5 transition-all cursor-pointer text-foreground"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Installation Site</span>
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {!selectedCustomer.sites || selectedCustomer.sites.length === 0 ? (
-                        <div className="col-span-2 text-center py-6 text-xs text-muted-foreground bg-secondary/15 rounded-lg border border-dashed">
-                          No installation sites linked.
-                        </div>
-                      ) : (
-                        selectedCustomer.sites.map((site: Site, idx: number) => (
-                          <div key={site.id} className="bg-secondary/20 border border-border/60 p-4 rounded-lg flex flex-col gap-2">
-                            <span className="text-[9px] font-mono font-bold uppercase text-primary">
-                              Location #{idx + 1}
-                            </span>
-                            <p className="text-xs text-foreground font-medium leading-relaxed">
-                              {site.address}
-                            </p>
-                            {(site.contactPerson || site.contactPhone) && (
-                              <div className="text-[10px] text-muted-foreground font-mono flex flex-col gap-0.5 border-t border-border/20 pt-2">
-                                <span>Contact: {site.contactPerson}</span>
-                                <span>Phone: {site.contactPhone}</span>
-                              </div>
-                            )}
-                            {site.notes && (
-                              <p className="text-[10px] text-muted-foreground italic bg-card p-1.5 border rounded">
-                                {site.notes}
-                              </p>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* 2. OUTSTANDING BALANCES TAB */}
                 {activeTab === "balance" && (
@@ -844,74 +744,6 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {/* Add Site Modal */}
-      {showAddSite && selectedCustomer && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden font-sans">
-            <div className="p-5 border-b border-border flex justify-between items-center bg-secondary/15">
-              <h3 className="font-heading font-semibold text-sm">Add Site Address for {selectedCustomer.name}</h3>
-              <button onClick={() => setShowAddSite(false)} className="text-muted-foreground hover:text-foreground text-xs font-semibold">
-                Cancel
-              </button>
-            </div>
-            
-            <form onSubmit={handleAddSite} className="p-6 space-y-4 text-xs">
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Installation Site Location Address *</label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Plot number, industrial area, street, city..."
-                  value={siteAddress}
-                  onChange={(e) => setSiteAddress(e.target.value)}
-                  className="w-full bg-secondary/30 border border-border rounded-xl p-2.5 text-xs outline-none focus:border-primary resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Site Manager Name</label>
-                  <input
-                    type="text"
-                    placeholder="Mr. Ramesh"
-                    value={siteContactPerson}
-                    onChange={(e) => setSiteContactPerson(e.target.value)}
-                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
-                  />
-                </div>
-                <div className="space-y-1 font-mono">
-                  <label className="text-[10px] font-sans font-bold uppercase text-muted-foreground">Manager Phone</label>
-                  <input
-                    type="text"
-                    placeholder="+91 99999 88888"
-                    value={siteContactPhone}
-                    onChange={(e) => setSiteContactPhone(e.target.value)}
-                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Site Installation Notes</label>
-                <input
-                  type="text"
-                  placeholder="Clearance height, power connection, wind load notes..."
-                  value={siteNotes}
-                  onChange={(e) => setSiteNotes(e.target.value)}
-                  className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-primary text-primary-foreground font-bold py-2.5 rounded-xl text-xs hover:bg-primary/95 shadow-md shadow-primary/25 cursor-pointer mt-2"
-              >
-                Save Site Address
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -204,17 +204,17 @@ export const DataService = {
       } catch (e) {}
     }
     const db = readMockDb();
-    return db.customers.map(c => ({
+    return (db.customers || []).map(c => ({
       ...c,
-      sites: db.sites.filter(s => s.customerId === c.id),
-      leads: db.leads.filter(l => l.customerId === c.id),
-      quotations: db.quotations.filter(q => q.customerId === c.id).map(q => ({
+      sites: (db.sites || []).filter(s => s.customerId === c.id),
+      leads: (db.leads || []).filter(l => l.customerId === c.id),
+      quotations: (db.quotations || []).filter(q => q.customerId === c.id).map(q => ({
         ...q,
-        items: db.quotationItems.filter(qi => qi.quotationId === q.id)
+        items: (db.quotationItems || []).filter(qi => qi.quotationId === q.id)
       })),
-      invoices: db.invoices.filter(i => i.customerId === c.id).map(i => ({
+      invoices: (db.invoices || []).filter(i => i.customerId === c.id).map(i => ({
         ...i,
-        payments: db.payments.filter(p => p.invoiceId === i.id)
+        payments: (db.payments || []).filter(p => p.invoiceId === i.id)
       }))
     }));
   },

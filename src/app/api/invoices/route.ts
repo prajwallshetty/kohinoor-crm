@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { DataService } from "@/lib/data-service";
 
 export async function GET() {
-  const invoices = await DataService.getInvoices();
-  return NextResponse.json(invoices);
+  try {
+    const invoices = await DataService.getInvoices();
+    return NextResponse.json(invoices);
+  } catch (e) {
+    return NextResponse.json({ error: "Failed to fetch invoices" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {

@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { DataService } from "@/lib/data-service";
 
 export async function GET() {
-  const measurements = await DataService.getMeasurements();
-  return NextResponse.json(measurements);
+  try {
+    const measurements = await DataService.getMeasurements();
+    return NextResponse.json(measurements);
+  } catch (e) {
+    return NextResponse.json({ error: "Failed to fetch measurements" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
