@@ -28,3 +28,17 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Failed to update customer" }, { status: 400 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "Missing customer ID" }, { status: 400 });
+    }
+    await DataService.deleteCustomer(id);
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    return NextResponse.json({ error: "Failed to delete customer" }, { status: 400 });
+  }
+}

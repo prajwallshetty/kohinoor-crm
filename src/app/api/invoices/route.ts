@@ -8,7 +8,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { quotationId, items, discount, gstRate, paymentDue, terms } = await request.json();
+    const { quotationId, items, materialItems, discount, gstRate, paymentDue, terms } = await request.json();
     if (!quotationId) {
       return NextResponse.json({ error: "Missing quotationId" }, { status: 400 });
     }
@@ -18,7 +18,8 @@ export async function POST(request: Request) {
       discount !== undefined ? parseFloat(discount) : undefined,
       gstRate !== undefined ? parseFloat(gstRate) : undefined,
       paymentDue,
-      terms
+      terms,
+      materialItems
     );
     return NextResponse.json(newInvoice);
   } catch (e) {

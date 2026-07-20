@@ -48,60 +48,21 @@ const initialMockData: MockDataSchema = {
   users: [
     { id: "u-1", email: "owner@kohinoor.com", name: "Administrator", avatarUrl: "" }
   ],
-  customers: [
-    { id: "c-1", name: "Metro Retailers Ltd", type: "COMPANY", email: "procurement@metro.com", phone: "+91 98765 43210", gstNumber: "27AAACM1234F1Z5", billingAddress: "405, Corporate Hub, Bandra West, Mumbai, MH", shippingAddress: "Warehouse A, Thane, MH" },
-    { id: "c-2", name: "Anil Sharma", type: "INDIVIDUAL", email: "anil.sharma@gmail.com", phone: "+91 91234 56789", gstNumber: "", billingAddress: "Flat 102, Shanti Niwas, Andheri East, Mumbai, MH", shippingAddress: "" }
-  ],
-  sites: [
-    { id: "s-1", customerId: "c-1", address: "Plot 42, GIDC Industrial Estate, Thane, MH", contactPerson: "Mr. Ramesh (Manager)", contactPhone: "+91 99999 88888", notes: "Requires heavy duty industrial shutter. High clearance." },
-    { id: "s-2", customerId: "c-2", address: "Flat 102, Shanti Niwas, Andheri East, Mumbai, MH", contactPerson: "Anil Sharma", contactPhone: "+91 91234 56789", notes: "Residential garage shutter installation." }
-  ],
-  leads: [
-    { id: "l-1", title: "Industrial Shutter - 4 Nos", customerId: "c-1", status: "SITE_VISIT", value: 320000.0, notes: "Site inspection scheduled. Needs motor-driven rolling shutters.", createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString() },
-    { id: "l-2", title: "Residential Garage Shutter", customerId: "c-2", status: "QUOTATION", value: 75000.0, notes: "Measurement taken. Quotation sent to customer for approval.", createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString() },
-    { id: "l-3", title: "Showroom Security Shutter", customerId: "c-1", status: "NEW", value: 120000.0, notes: "Received inbound query for retail mall outlet.", createdAt: new Date().toISOString() }
-  ],
-  measurements: [
-    { id: "m-1", leadId: "l-1", width: 4500, height: 3800, shutterType: "Galvanized Steel Slat (1.2mm)", motor: "Somfy 120Nm Motorised", color: "Slate Grey", photos: "/uploads/shutter1.jpg", drawing: "", notes: "Requires side guides reinforcement due to wind load." },
-    { id: "m-2", leadId: "l-2", width: 2800, height: 2400, shutterType: "Polycarbonate Transparent Slat", motor: "Generic 40Nm Motorised", color: "Clear / Natural", photos: "", drawing: "", notes: "Standard single phase connection nearby." }
-  ],
-  quotations: [
-    { id: "q-1", quoteNumber: "QT-2026-0001", customerId: "c-1", leadId: "l-1", status: "DRAFT", discount: 5.0, gstRate: 18.0, gstAmount: 54720.0, totalAmount: 358720.0, terms: "50% advance, balance on installation. 2 years warranty on motor.", version: 1, createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString() },
-    { id: "q-2", quoteNumber: "QT-2026-0002", customerId: "c-2", leadId: "l-2", status: "APPROVED", discount: 0.0, gstRate: 18.0, gstAmount: 13500.0, totalAmount: 88500.0, terms: "100% advance. 1 year warranty.", version: 2, parentQuoteId: "q-2-v1", createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString() }
-  ],
-  quotationItems: [
-    { id: "qi-1", quotationId: "q-1", productName: "Galvanized Steel Rolling Shutter (4500x3800)", quantity: 4, unitPrice: 70000.0, lineTotal: 280000.0 },
-    { id: "qi-2", quotationId: "q-1", productName: "Somfy Shutter Motor 120Nm", quantity: 4, unitPrice: 12000.0, lineTotal: 48000.0 },
-    { id: "qi-3", quotationId: "q-2", productName: "Polycarbonate Clear Rolling Shutter (2800x2400)", quantity: 1, unitPrice: 65000.0, lineTotal: 65000.0 },
-    { id: "qi-4", quotationId: "q-2", productName: "Generic Shutter Motor 40Nm", quantity: 1, unitPrice: 10000.0, lineTotal: 10000.0 }
-  ],
-  invoices: [
-    { id: "i-1", invoiceNumber: "INV-2026-0001", quotationId: "q-2", customerId: "c-2", status: "PARTIAL", amountPaid: 40000.0, totalAmount: 88500.0, discount: 0.0, gstRate: 18.0, gstAmount: 13500.0, paymentDue: new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString(), terms: "Thank you for your business.", createdAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString() }
-  ],
-  payments: [
-    { id: "p-1", invoiceId: "i-1", amount: 40000.0, paymentType: "ADVANCE", paymentMethod: "UPI", transactionRef: "UPI9827341203", createdAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString() }
-  ],
-  installationJobs: [
-    { id: "j-1", quotationId: "q-2", invoiceId: "i-1", technicianName: "Mahesh Singh", status: "PENDING", scheduledDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString(), photos: "", signatureUrl: "", notes: "Bring extra guide brackets. Site access after 10 AM.", createdAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString() }
-  ],
-  inventoryItems: [
-    { id: "inv-1", category: "SLATS", name: "Galvanized Steel Slat (1.2mm, Silver)", sku: "SLT-GS-1.2-SV", stockQty: 120, minStockQty: 30, unitPrice: 450.0 },
-    { id: "inv-2", category: "SLATS", name: "Polycarbonate Transparent Slat", sku: "SLT-PC-CLR-01", stockQty: 15, minStockQty: 25, unitPrice: 1200.0 }, // Trigger warning!
-    { id: "inv-3", category: "MOTORS", name: "Somfy motor 120Nm 230V", sku: "MTR-SMF-120NM", stockQty: 8, minStockQty: 3, unitPrice: 9500.0 },
-    { id: "inv-4", category: "MOTORS", name: "Generic motor 40Nm 230V", sku: "MTR-GEN-40NM", stockQty: 2, minStockQty: 5, unitPrice: 6200.0 }, // Trigger warning!
-    { id: "inv-5", category: "REMOTE", name: "Somfy Telis 4 Channel Remote", sku: "RMT-SMF-T04", stockQty: 24, minStockQty: 10, unitPrice: 1800.0 },
-    { id: "inv-6", category: "GUIDE_RAILS", name: "Heavy Duty Shutter Guide Channel (U-Shape)", sku: "GD-HD-U100", stockQty: 40, minStockQty: 15, unitPrice: 1100.0 }
-  ],
-  warranties: [
-    { id: "w-1", customerId: "c-2", invoiceId: "i-1", shutterSerial: "SH-PC-2026-9812", warrantyPeriodMonths: 24, expiryDate: new Date(Date.now() + 24 * 30 * 24 * 3600 * 1000).toISOString(), status: "ACTIVE", serviceHistoryJson: "[]", createdAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString() }
-  ],
-  auditLogs: [
-    { id: "al-1", userId: "u-1", userEmail: "owner@kohinoor.com", action: "LOGIN", details: "User logged in from browser.", timestamp: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString() },
-    { id: "al-2", userId: "u-1", userEmail: "owner@kohinoor.com", action: "QUOTATION_CREATE", details: "Created quotation QT-2026-0001", timestamp: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString() }
-  ],
+  customers: [],
+  sites: [],
+  leads: [],
+  measurements: [],
+  quotations: [],
+  quotationItems: [],
+  invoices: [],
+  payments: [],
+  installationJobs: [],
+  inventoryItems: [],
+  warranties: [],
+  auditLogs: [],
   companyBranding: {
     id: "cb-1",
-    companyName: "Kohinoor Shutter Industries",
+    companyName: "Kohinoor Rolling Shutters",
     logoUrl: "/logo-placeholder.png",
     gstNumber: "27AAACK5912K1Z9",
     bankName: "State Bank of India",
@@ -113,25 +74,28 @@ const initialMockData: MockDataSchema = {
   storageQuota: {
     id: "sq-1",
     totalQuotaBytes: 10 * 1024 * 1024 * 1024, // 10 GB
-    usedBytes: 1.45 * 1024 * 1024 * 1024 // 1.45 GB
+    usedBytes: 0
   }
 };
 
 // Check if database connection works, otherwise run mock file read/write
+let isDbConnectedPromise: Promise<boolean> | null = null;
 let isDbConnected = false;
 
-async function checkDatabaseConnection() {
-  try {
-    // Attempt a quick query
-    await prisma.$queryRaw`SELECT 1`;
-    isDbConnected = true;
-  } catch (e) {
-    isDbConnected = false;
-  }
+async function ensureDbConnection(): Promise<boolean> {
+  if (isDbConnectedPromise) return isDbConnectedPromise;
+  isDbConnectedPromise = (async () => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      isDbConnected = true;
+      return true;
+    } catch (e) {
+      isDbConnected = false;
+      return false;
+    }
+  })();
+  return isDbConnectedPromise;
 }
-
-// In Next.js, check connection on start
-checkDatabaseConnection();
 
 // Read Mock DB
 function readMockDb(): MockDataSchema {
@@ -168,6 +132,7 @@ export const DataService = {
 
   // AUDIT LOGS
   async logAction(userId: string | null, email: string | null, action: string, details: string) {
+    await ensureDbConnection();
     const timestamp = new Date();
     if (isDbConnected) {
       try {
@@ -192,6 +157,7 @@ export const DataService = {
   },
 
   async getAuditLogs() {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         return await prisma.auditLog.findMany({ orderBy: { timestamp: "desc" }, take: 100 });
@@ -202,6 +168,7 @@ export const DataService = {
 
   // USERS
   async getUsers() {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         return await prisma.user.findMany();
@@ -211,6 +178,7 @@ export const DataService = {
   },
 
   async findUserByEmail(email: string) {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         return await prisma.user.findUnique({ where: { email } });
@@ -222,6 +190,7 @@ export const DataService = {
 
   // CUSTOMERS
   async getCustomers() {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         return await prisma.customer.findMany({
@@ -251,6 +220,7 @@ export const DataService = {
   },
 
   async addCustomer(customer: any) {
+    await ensureDbConnection();
     const id = `c-${Date.now()}`;
     const newCust = { 
       id, 
@@ -282,6 +252,7 @@ export const DataService = {
   },
 
   async updateCustomer(id: string, updates: any) {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         return await prisma.customer.update({ where: { id }, data: updates });
@@ -298,8 +269,24 @@ export const DataService = {
     return null;
   },
 
+  async deleteCustomer(id: string) {
+    await ensureDbConnection();
+    if (isDbConnected) {
+      try {
+        await prisma.customer.delete({ where: { id } });
+        return true;
+      } catch (e) {}
+    }
+    const db = readMockDb();
+    db.customers = db.customers.filter(c => c.id !== id);
+    writeMockDb(db);
+    this.logAction("u-1", "owner@kohinoor.com", "CUSTOMER_DELETE", `Deleted customer ID: ${id}`);
+    return true;
+  },
+
   // SITES
   async addSite(customerId: string, siteData: any) {
+    await ensureDbConnection();
     const id = `s-${Date.now()}`;
     const newSite = { id, customerId, ...siteData, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     if (isDbConnected) {
@@ -316,6 +303,7 @@ export const DataService = {
 
   // LEADS
   async getLeads() {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         return await prisma.lead.findMany({
@@ -409,6 +397,7 @@ export const DataService = {
 
   // QUOTATIONS
   async getQuotations() {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         return await prisma.quotation.findMany({
@@ -430,6 +419,34 @@ export const DataService = {
       })),
       lead: db.leads.find(l => l.id === q.leadId)
     }));
+  },
+
+  async getQuotationById(id: string) {
+    await ensureDbConnection();
+    if (isDbConnected) {
+      try {
+        return await prisma.quotation.findUnique({
+          where: { id },
+          include: { 
+            customer: true, 
+            items: { include: { bomItems: true } }, 
+            lead: true 
+          }
+        });
+      } catch (e) {}
+    }
+    const db = readMockDb();
+    const q = db.quotations.find(q => q.id === id);
+    if (!q) return null;
+    return {
+      ...q,
+      customer: db.customers.find(c => c.id === q.customerId),
+      items: db.quotationItems.filter(qi => qi.quotationId === q.id).map(qi => ({
+        ...qi,
+        bomItems: db.bomItems ? db.bomItems.filter((bom: any) => bom.shutterId === qi.id) : []
+      })),
+      lead: db.leads.find(l => l.id === q.leadId)
+    };
   },
 
   async addQuotation(quotation: any, items: any[]) {
@@ -749,6 +766,7 @@ export const DataService = {
 
   // INVOICES
   async getInvoices() {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         return await prisma.invoice.findMany({
@@ -780,7 +798,8 @@ export const DataService = {
     discount?: number,
     gstRate?: number,
     paymentDue?: string,
-    terms?: string
+    terms?: string,
+    materialItems?: any[]
   ) {
     if (isDbConnected) {
       try {
@@ -1006,6 +1025,7 @@ export const DataService = {
       gstAmount: finalGstAmount,
       paymentDue: paymentDue ? new Date(paymentDue).toISOString() : new Date(Date.now() + 15 * 24 * 3600 * 1000).toISOString(),
       terms: terms || quote.terms || "",
+      materialItems: materialItems || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -1030,19 +1050,37 @@ export const DataService = {
 
   // PAYMENTS
   async getPayments() {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
-        return await prisma.payment.findMany({ include: { invoice: true } });
+        return await prisma.payment.findMany({ 
+          include: { 
+            invoice: { 
+              include: { customer: true } 
+            } 
+          },
+          orderBy: { createdAt: "desc" }
+        });
       } catch (e) {}
     }
     const db = readMockDb();
     return db.payments.map(p => ({
       ...p,
-      invoice: db.invoices.find(i => i.id === p.invoiceId)
+      invoice: (() => {
+        const inv = db.invoices.find(i => i.id === p.invoiceId);
+        if (inv) {
+          return {
+            ...inv,
+            customer: db.customers.find(c => c.id === inv.customerId)
+          };
+        }
+        return null;
+      })()
     }));
   },
 
   async addPayment(paymentData: any) {
+    await ensureDbConnection();
     const id = `p-${Date.now()}`;
     const amount = parseFloat(paymentData.amount);
     const newPayment = {
@@ -1066,7 +1104,7 @@ export const DataService = {
           include: { payments: true }
         });
         if (invoice) {
-          const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0) + amount;
+          const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
           let status: InvoiceStatus = "PARTIAL";
           if (totalPaid >= invoice.totalAmount) {
             status = "PAID";
@@ -1184,7 +1222,7 @@ export const DataService = {
         if (!cb) {
           cb = await prisma.companyBranding.create({
             data: {
-              companyName: "Kohinoor Shutter Industries",
+              companyName: "Kohinoor Rolling Shutters",
               logoUrl: "/logo-placeholder.png",
               gstNumber: "27AAACK5912K1Z9",
               bankName: "State Bank of India",
@@ -1225,6 +1263,7 @@ export const DataService = {
 
   // QUOTATION DELETE
   async deleteQuotation(id: string) {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         const invoiceCount = await prisma.invoice.count({ where: { quotationId: id } });

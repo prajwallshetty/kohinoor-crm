@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { 
   FileText, Plus, Search, Trash2, CheckCircle2, Copy, Send, 
-  Printer, ArrowLeft, RefreshCw, MessageSquare, Mail, ClipboardCopy, Check, UserPlus, FileCheck, Building, User
+  Printer, ArrowLeft, RefreshCw, MessageSquare, Mail, ClipboardCopy, Check, UserPlus, FileCheck, Building, User,
+  ChevronRight, ChevronLeft, Layers, Maximize2, Calculator, CheckCircle, X, Zap, Receipt
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { PageSkeleton } from "@/components/ui/loaders";
 import QRCode from "qrcode";
 
 interface Customer {
@@ -21,13 +24,18 @@ interface Customer {
 
 interface QuoteItem {
   id?: string;
-  productName: string;
+  productName?: string;
+  shutterName?: string;
   materialCategory?: string;
   material?: string;
   thickness?: string;
   profile?: string;
   length?: number;
+  height?: number;
   width?: number;
+  color?: string;
+  operationType?: string;
+  motorType?: string;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
@@ -66,8 +74,9 @@ export default function QuotationsPage() {
   const [selectedQuote, setSelectedQuote] = useState<Quotation | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
 
-  // New Quote Form State
+  // New Quote Form & Wizard State
   const [showAddQuote, setShowAddQuote] = useState(false);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [formCustId, setFormCustId] = useState("");
   
@@ -85,7 +94,7 @@ export default function QuotationsPage() {
   const [formDiscount, setFormDiscount] = useState("0");
   const [formGstOff, setFormGstOff] = useState(true); // GST OFF by default
   const [formGstRate, setFormGstRate] = useState("18");
-  const [formStatus, setFormStatus] = useState<"DRAFT" | "SENT" | "APPROVED">("DRAFT");
+  const [formStatus, setFormStatus] = useState<"DRAFT" | "SENT" | "APPROVED" | "REJECTED">("DRAFT");
   const [formTerms, setFormTerms] = useState(
     "1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client."
   );
@@ -99,43 +108,40 @@ export default function QuotationsPage() {
       material: "GI",
       thickness: "21G",
       profile: "Flat",
-      color: "Grey",
+      color: "Slate Grey",
       operationType: "Manual",
       motorType: "",
       quantity: 1,
       unitPrice: 18000,
-      lineTotal: 18000,
-      bomItems: []
+      lineTotal: 18000
     }
   ]);
 
-  // BOM Configurator states
-  const [bomShutterIndex, setBomShutterIndex] = useState<number | null>(null);
-  const [showBomConfigModal, setShowBomConfigModal] = useState(false);
-  const [editingBomItems, setEditingBomItems] = useState<any[]>([]);
-
-  // Smart Autofill state (not used for generic rows anymore)
-  const [suggestedItems, setSuggestedItems] = useState<any[] | null>(null);
   const [notification, setNotification] = useState("");
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
-      const qRes = await fetch("/api/quotations");
-      const cRes = await fetch("/api/customers");
-      const mRes = await fetch("/api/master-data");
-      const bRes = await fetch("/api/admin/branding");
-      
-      if (qRes.ok && cRes.ok && mRes.ok) {
-        setQuotations(await qRes.json());
-        setCustomers(await cRes.json());
-        setMasterItems(await mRes.json());
-      }
-      if (bRes.ok) {
-        setBranding(await bRes.json());
-      }
+      const [qRes, cRes, mRes, bRes] = await Promise.all([
+        fetch("/api/quotations"),
+        fetch("/api/customers"),
+        fetch("/api/master-data"),
+        fetch("/api/admin/branding")
+      ]);
+
+      const [qData, cData, mData, bData] = await Promise.all([
+        qRes.ok ? qRes.json() : [],
+        cRes.ok ? cRes.json() : [],
+        mRes.ok ? mRes.json() : [],
+        bRes.ok ? bRes.json() : null
+      ]);
+
+      setQuotations(qData);
+      setCustomers(cData);
+      setMasterItems(mData);
+      if (bData) setBranding(bData);
     } catch (e) {}
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
   useEffect(() => {
@@ -154,159 +160,88 @@ export default function QuotationsPage() {
     }
   }, [selectedQuote, branding]);
 
-  // Autocalculate the standard BOM items from Shutter specs
-  const calculateDefaultBOM = (shutter: any, itemsList: any[]) => {
-    const width = parseFloat(shutter.width || 0);
-    const height = parseFloat(shutter.height || 0);
-    const area = width * height;
-    
-    const findRate = (catName: string, nameSearch?: string) => {
-      const list = itemsList.filter(mi => mi.category === catName && !mi.isDisabled);
-      if (nameSearch) {
-        const match = list.find(mi => mi.name.toLowerCase().includes(nameSearch.toLowerCase()));
-        if (match) return { rate: match.rate, spec: match.name, unit: match.unit };
-      }
-      const first = list[0];
-      return first ? { rate: first.rate, spec: first.name, unit: first.unit } : { rate: 0, spec: "", unit: "Pcs" };
-    };
-
-    const pgiSheet = findRate("GI Sheet", shutter.material);
-    const pKabadi = findRate("Kabadi");
-    const pPipe = findRate("Pipe");
-    const pSpring = findRate("Springs");
-    const pBracket = findRate("Brackets");
-    const pWheel = findRate("Wheels");
-    const pGuide = findRate("Guides");
-    const pTopCap = findRate("Top Cap");
-    const pLock = findRate("Lock Set");
-    const pHandle = findRate("Handle");
-    const pFitting = findRate("Fittings");
-
-    const bom = [
-      {
-        materialName: "GI Sheet",
-        specification: pgiSheet.spec || `${shutter.material || "GI"} ${shutter.thickness || "21G"} ${shutter.profile || "Flat"}`,
-        quantity: area,
-        unit: pgiSheet.unit || "Sft",
-        rate: pgiSheet.rate || 95,
-        totalPrice: area * (pgiSheet.rate || 95)
-      },
-      {
-        materialName: "Kabadi",
-        specification: pKabadi.spec || "Standard Flat",
-        quantity: width,
-        unit: pKabadi.unit || "Rft",
-        rate: pKabadi.rate || 120,
-        totalPrice: width * (pKabadi.rate || 120)
-      },
-      {
-        materialName: "Pipe",
-        specification: pPipe.spec || "Heavy Pipe",
-        quantity: width,
-        unit: pPipe.unit || "Rft",
-        rate: pPipe.rate || 220,
-        totalPrice: width * (pPipe.rate || 220)
-      },
-      {
-        materialName: "Spring",
-        specification: pSpring.spec || "Heavy 5G",
-        quantity: Math.ceil(width / 3),
-        unit: pSpring.unit || "Pcs",
-        rate: pSpring.rate || 350,
-        totalPrice: Math.ceil(width / 3) * (pSpring.rate || 350)
-      },
-      {
-        materialName: "Bracket",
-        specification: pBracket.spec || "13/16 Bracket",
-        quantity: 2,
-        unit: pBracket.unit || "Pcs",
-        rate: pBracket.rate || 450,
-        totalPrice: 2 * (pBracket.rate || 450)
-      },
-      {
-        materialName: "Wheel",
-        specification: pWheel.spec || "Standard Wheel",
-        quantity: 2,
-        unit: pWheel.unit || "Pcs",
-        rate: pWheel.rate || 150,
-        totalPrice: 2 * (pWheel.rate || 150)
-      },
-      {
-        materialName: "Guide",
-        specification: pGuide.spec || "Pair Guide",
-        quantity: height * 2,
-        unit: pGuide.unit || "Rft",
-        rate: pGuide.rate || 110,
-        totalPrice: (height * 2) * (pGuide.rate || 110)
-      },
-      {
-        materialName: "Top Cap",
-        specification: pTopCap.spec || "Top Cover",
-        quantity: 1,
-        unit: pTopCap.unit || "Pcs",
-        rate: pTopCap.rate || 250,
-        totalPrice: 1 * (pTopCap.rate || 250)
-      },
-      {
-        materialName: "Lock Set",
-        specification: pLock.spec || "Standard Lock",
-        quantity: 1,
-        unit: pLock.unit || "Pcs",
-        rate: pLock.rate || 350,
-        totalPrice: 1 * (pLock.rate || 350)
-      },
-      {
-        materialName: "Handle",
-        specification: pHandle.spec || "Basic Pull",
-        quantity: 2,
-        unit: pHandle.unit || "Pcs",
-        rate: pHandle.rate || 80,
-        totalPrice: 2 * (pHandle.rate || 80)
-      },
-      {
-        materialName: "Fittings",
-        specification: pFitting.spec || "Fitting Kit",
-        quantity: 1,
-        unit: pFitting.unit || "Pcs",
-        rate: pFitting.rate || 150,
-        totalPrice: 1 * (pFitting.rate || 150)
-      }
-    ];
-
-    if (shutter.operationType === "Motorized") {
-      const pMotor = findRate("Motors", shutter.motorType);
-      bom.push({
-        materialName: "Motor",
-        specification: pMotor.spec || shutter.motorType || "Standard Motor",
-        quantity: 1,
-        unit: pMotor.unit || "Pcs",
-        rate: pMotor.rate || 12000,
-        totalPrice: 1 * (pMotor.rate || 12000)
-      });
-    }
-
-    return bom;
-  };
-
   const addItemRow = () => {
     const defaultShutter = {
-      shutterName: `Shutter ${formItems.length + 1}`,
+      shutterName: `Shutter #${formItems.length + 1}`,
       width: 10,
       height: 8,
       material: "GI",
       thickness: "21G",
       profile: "Flat",
-      color: "Grey",
+      color: "Slate Grey",
       operationType: "Manual",
       motorType: "",
       quantity: 1,
       unitPrice: 18000,
-      lineTotal: 18000,
-      bomItems: [] as any[]
+      lineTotal: 18000
     };
     
-    defaultShutter.bomItems = calculateDefaultBOM(defaultShutter, masterItems);
     setFormItems((prev) => [...prev, defaultShutter]);
+    triggerToast(`Added Shutter #${formItems.length + 1}`);
+  };
+
+  const addPresetShutter = (presetType: "SHOP" | "INDUSTRIAL" | "COMMERCIAL") => {
+    let preset: any = {};
+    if (presetType === "SHOP") {
+      preset = {
+        shutterName: `Standard Shop Shutter #${formItems.length + 1}`,
+        width: 10,
+        height: 8,
+        material: "GI",
+        thickness: "21G",
+        profile: "Flat",
+        color: "Slate Grey",
+        operationType: "Manual",
+        motorType: "",
+        quantity: 1,
+        unitPrice: 18000,
+        lineTotal: 18000
+      };
+    } else if (presetType === "INDUSTRIAL") {
+      const match = masterItems.find(mi => mi.category === "Motors" && !mi.isDisabled);
+      preset = {
+        shutterName: `Heavy Industrial Shutter #${formItems.length + 1}`,
+        width: 15,
+        height: 12,
+        material: "GI",
+        thickness: "18G",
+        profile: "Round",
+        color: "Industrial Grey",
+        operationType: "Motorized",
+        motorType: match ? match.name : "Somfy 120Nm",
+        quantity: 1,
+        unitPrice: 48000,
+        lineTotal: 48000
+      };
+    } else if (presetType === "COMMERCIAL") {
+      const match = masterItems.find(mi => mi.category === "Motors" && !mi.isDisabled);
+      preset = {
+        shutterName: `Commercial Motorized Shutter #${formItems.length + 1}`,
+        width: 12,
+        height: 10,
+        material: "PPGI",
+        thickness: "20G",
+        profile: "Semi",
+        color: "Pure White",
+        operationType: "Motorized",
+        motorType: match ? match.name : "Somfy 80Nm",
+        quantity: 1,
+        unitPrice: 32000,
+        lineTotal: 32000
+      };
+    }
+    setFormItems((prev) => [...prev, preset]);
+    triggerToast(`Added preset: ${preset.shutterName}`);
+  };
+
+  const duplicateItemRow = (index: number) => {
+    const original = formItems[index];
+    const copy = {
+      ...JSON.parse(JSON.stringify(original)),
+      shutterName: `${original.shutterName || "Shutter"} (Copy)`
+    };
+    setFormItems((prev) => [...prev, copy]);
+    triggerToast("Shutter configuration duplicated!");
   };
 
   const updateItemRow = (index: number, field: string, value: any) => {
@@ -345,61 +280,17 @@ export default function QuotationsPage() {
       }
 
       item.lineTotal = item.quantity * item.unitPrice;
-      
-      // Auto calculate default BOM when specifications or sizes change
-      if (["width", "height", "material", "thickness", "profile", "operationType", "motorType"].includes(field)) {
-        item.bomItems = calculateDefaultBOM(item, masterItems);
-      }
-
       updated[index] = item;
       return updated;
     });
   };
 
   const removeItemRow = (index: number) => {
-    if (formItems.length === 1) return;
+    if (formItems.length === 1) {
+      triggerToast("Quotation must contain at least 1 shutter.");
+      return;
+    }
     setFormItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const openBOMConfigurator = (idx: number) => {
-    setBomShutterIndex(idx);
-    const shutter = formItems[idx];
-    const items = shutter.bomItems && shutter.bomItems.length > 0
-      ? shutter.bomItems
-      : calculateDefaultBOM(shutter, masterItems);
-    setEditingBomItems(JSON.parse(JSON.stringify(items)));
-    setShowBomConfigModal(true);
-  };
-
-  const saveBOMConfiguration = () => {
-    if (bomShutterIndex === null) return;
-    setFormItems((prev) => {
-      const updated = [...prev];
-      updated[bomShutterIndex].bomItems = editingBomItems;
-      return updated;
-    });
-    setShowBomConfigModal(false);
-    setBomShutterIndex(null);
-    triggerToast("Internal Bill of Materials (BOM) saved for this shutter!");
-  };
-
-  const updateBomItemField = (idx: number, field: string, value: any) => {
-    setEditingBomItems((prev) => {
-      const updated = [...prev];
-      const bom = { ...updated[idx] };
-      if (field === "specification") {
-        bom.specification = value;
-      } else if (field === "quantity") {
-        bom.quantity = parseFloat(value) || 0;
-      } else if (field === "unit") {
-        bom.unit = value;
-      } else if (field === "rate") {
-        bom.rate = parseFloat(value) || 0;
-      }
-      bom.totalPrice = bom.quantity * bom.rate;
-      updated[idx] = bom;
-      return updated;
-    });
   };
 
   const triggerToast = (msg: string) => {
@@ -407,15 +298,22 @@ export default function QuotationsPage() {
     setTimeout(() => setNotification(""), 3500);
   };
 
+  const handleOpenAddModal = () => {
+    setWizardStep(1);
+    setShowAddQuote(true);
+  };
+
   // Submit Quotation
   const handleCreateQuotation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isNewCustomer && !formCustId) {
       alert("Please select an existing customer profile.");
+      setWizardStep(1);
       return;
     }
     if (isNewCustomer && (!newCustName || !newCustPhone || !newCustBilling)) {
       alert("Customer Name, Phone, and Billing Address are required for new registry.");
+      setWizardStep(1);
       return;
     }
 
@@ -473,7 +371,7 @@ export default function QuotationsPage() {
       });
 
       if (res.ok) {
-        triggerToast("Quotation document created successfully!");
+        triggerToast("Quotation proposal created successfully!");
         // Reset form
         setFormCustId("");
         setNewCustName("");
@@ -487,7 +385,8 @@ export default function QuotationsPage() {
         setIsNewCustomer(false);
         setFormDiscount("0");
         setFormGstOff(true);
-        setFormItems([{ productName: "GI Sheet (GI 21G Flat)", materialCategory: "GI Sheet", material: "GI", thickness: "21G", profile: "Flat", length: 10, width: 8, quantity: 1, unitPrice: 85, lineTotal: 6800, unit: "Sft" }]);
+        setFormItems([{ shutterName: "Main Entrance Shutter", width: 10, height: 8, material: "GI", thickness: "21G", profile: "Flat", color: "Slate Grey", operationType: "Manual", motorType: "", quantity: 1, unitPrice: 18000, lineTotal: 18000 }]);
+        setWizardStep(1);
         setShowAddQuote(false);
         fetchData();
       }
@@ -495,6 +394,14 @@ export default function QuotationsPage() {
   };
 
   const handleUpdateStatus = async (id: string, newStatus: any) => {
+    // Optimistic instant UI update (no loading spinner or page flicker)
+    setQuotations((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, status: newStatus } : q))
+    );
+    if (selectedQuote && selectedQuote.id === id) {
+      setSelectedQuote((prev) => (prev ? { ...prev, status: newStatus } : null));
+    }
+
     try {
       const res = await fetch(`/api/quotations/${id}`, {
         method: "PATCH",
@@ -504,13 +411,15 @@ export default function QuotationsPage() {
 
       if (res.ok) {
         triggerToast(`Quotation status updated to ${newStatus}!`);
-        const updated = await res.json();
-        if (selectedQuote && selectedQuote.id === id) {
-          setSelectedQuote((prev) => prev ? { ...prev, status: newStatus } : null);
-        }
-        fetchData();
+        // Quiet background sync without unmounting table
+        fetchData(false);
+      } else {
+        // Rollback on server error
+        fetchData(true);
       }
-    } catch (e) {}
+    } catch (e) {
+      fetchData(true);
+    }
   };
 
   const handleDuplicate = async (id: string) => {
@@ -523,7 +432,7 @@ export default function QuotationsPage() {
 
       if (res.ok) {
         triggerToast("Quotation duplicated to Draft!");
-        fetchData();
+        fetchData(false);
       }
     } catch (e) {}
   };
@@ -574,24 +483,29 @@ export default function QuotationsPage() {
 
   const shareWhatsApp = (q: Quotation) => {
     const text = encodeURIComponent(
-      `Hello! Please find the Rolling Shutter quotation ${q.quoteNumber} from Kohinoor Shutters.\nTotal: ₹${q.totalAmount.toLocaleString("en-IN")}\nAddress: ${q.customer?.billingAddress}`
+      `Hello! Please find the Rolling Shutter quotation ${q.quoteNumber} from Kohinoor Rolling Shutters.\nTotal: ₹${q.totalAmount.toLocaleString("en-IN")}\nAddress: ${q.customer?.billingAddress}`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
   };
 
   const shareEmail = (q: Quotation) => {
-    const subject = encodeURIComponent(`Rolling Shutter Quotation ${q.quoteNumber} - Kohinoor Shutters`);
-    const body = encodeURIComponent(`Dear Customer,\n\nPlease find attached quotation details for your rolling shutter installation.\nQuotation Number: ${q.quoteNumber}\nTotal Amount: ₹${q.totalAmount.toLocaleString("en-IN")}\n\nWarm regards,\nKohinoor Shutters`);
+    const subject = encodeURIComponent(`Rolling Shutter Quotation ${q.quoteNumber} - Kohinoor Rolling Shutters`);
+    const body = encodeURIComponent(`Dear Customer,\n\nPlease find attached quotation details for your rolling shutter installation.\nQuotation Number: ${q.quoteNumber}\nTotal Amount: ₹${q.totalAmount.toLocaleString("en-IN")}\n\nWarm regards,\nKohinoor Rolling Shutters`);
     window.open(`mailto:${q.customer?.email || ""}?subject=${subject}&body=${body}`, "_blank");
   };
 
-  // Get options for master select fields
-  const categoriesList = masterItems.filter(mi => mi.category === "Material Categories" && !mi.isDisabled);
   const thicknessList = masterItems.filter(mi => mi.category === "Thickness" && !mi.isDisabled);
-  const profilesList = masterItems.filter(mi => mi.category === "Profiles" && !mi.isDisabled);
+  const selectedCustomerObj = customers.find(c => c.id === formCustId);
+
+  // Summaries for active form
+  const totalFormArea = formItems.reduce((sum, item) => sum + ((parseFloat(item.width) || 0) * (parseFloat(item.height) || 0) * (parseInt(item.quantity) || 1)), 0);
+  const totalFormSubtotal = formItems.reduce((sum, item) => sum + (parseFloat(item.lineTotal) || 0), 0);
+  const netFormTotal = Math.max(0, totalFormSubtotal - (parseFloat(formDiscount) || 0));
+
+  if (loading) return <PageSkeleton rows={7} />;
 
   return (
-    <div className="flex flex-col gap-6 h-full relative">
+    <div className="flex flex-col gap-6 h-full relative font-sans">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-4 right-4 bg-primary text-primary-foreground text-xs px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 border border-primary/20 animate-bounce">
@@ -617,8 +531,8 @@ export default function QuotationsPage() {
             </div>
 
             <button
-              onClick={() => setShowAddQuote(true)}
-              className="bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold py-2 px-4 rounded-lg flex items-center gap-2 shadow-lg shadow-primary/25 cursor-pointer font-sans"
+              onClick={handleOpenAddModal}
+              className="bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold py-2.5 px-4 rounded-lg flex items-center gap-2 shadow-lg shadow-primary/25 cursor-pointer transition-all hover:scale-[1.01]"
             >
               <Plus className="w-4 h-4" />
               <span>Draft New Shutter Quotation</span>
@@ -638,7 +552,7 @@ export default function QuotationsPage() {
                     <th className="p-4 text-right">Taxable Subtotal</th>
                     <th className="p-4 text-right">Grand Total (Rounded)</th>
                     <th className="p-4">Stage</th>
-                    <th className="p-4 text-center">Actions</th>
+                    <th className="p-4 text-right pr-6">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60 text-xs">
@@ -682,36 +596,59 @@ export default function QuotationsPage() {
                             ₹{q.totalAmount.toLocaleString("en-IN")}
                           </td>
                           <td className="p-4">
-                            <span
-                              className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded border ${
+                            <select
+                              value={q.status}
+                              onChange={(e) => handleUpdateStatus(q.id, e.target.value)}
+                              className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-lg border outline-none cursor-pointer transition-all ${
                                 q.status === "APPROVED"
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                                   : q.status === "SENT"
-                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
                                   : q.status === "REJECTED"
-                                  ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                                  : "bg-muted/15 text-muted-foreground border-border"
+                                  ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                                  : "bg-secondary/60 text-muted-foreground border-border"
                               }`}
                             >
-                              {q.status}
-                            </span>
+                              <option value="DRAFT" className="bg-card text-foreground font-sans">DRAFT</option>
+                              <option value="SENT" className="bg-card text-amber-400 font-sans">SENT</option>
+                              <option value="APPROVED" className="bg-card text-emerald-400 font-sans">APPROVED</option>
+                              <option value="REJECTED" className="bg-card text-rose-400 font-sans">REJECTED</option>
+                            </select>
                           </td>
                           <td className="p-4">
-                            <div className="flex items-center justify-center gap-2">
+                            <div className="flex items-center justify-end gap-2 pr-2">
+                              {q.status === "APPROVED" && (
+                                <Link
+                                  href={`/invoices?convert=${q.id}`}
+                                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 py-1 rounded-md text-[11px] flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 transition-all shrink-0"
+                                >
+                                  <Receipt className="w-3.5 h-3.5" />
+                                  <span>Convert to Invoice</span>
+                                </Link>
+                              )}
+
                               <button
                                 onClick={() => setSelectedQuote(q)}
-                                className="bg-secondary/60 hover:bg-secondary border border-border/80 text-foreground font-semibold px-2.5 py-1 rounded text-[11px] flex items-center gap-1 transition-all"
+                                className="bg-secondary hover:bg-secondary/80 border border-border/80 text-foreground font-semibold px-2.5 py-1 rounded-md text-[11px] flex items-center gap-1.5 transition-all shrink-0"
                               >
-                                <FileText className="w-3.5 h-3.5" />
+                                <FileText className="w-3.5 h-3.5 text-muted-foreground" />
                                 <span>Preview / Print</span>
                               </button>
                               
                               <button
                                 onClick={() => handleDuplicate(q.id)}
-                                className="p-1 hover:bg-secondary border border-transparent hover:border-border rounded text-muted-foreground hover:text-foreground"
+                                className="p-1.5 hover:bg-secondary border border-border/60 hover:border-border rounded-md text-muted-foreground hover:text-foreground transition-all shrink-0"
                                 title="Duplicate (v1 Draft)"
                               >
                                 <Copy className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteQuote(q.id)}
+                                className="p-1.5 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 rounded-md text-muted-foreground hover:text-rose-500 transition-all shrink-0 cursor-pointer"
+                                title="Delete Quotation"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
@@ -738,24 +675,28 @@ export default function QuotationsPage() {
             </button>
 
             <div className="flex items-center gap-3">
-              {/* Approval workflow buttons */}
-              {selectedQuote.status !== "APPROVED" && (
-                <>
-                  <button
-                    onClick={() => handleUpdateStatus(selectedQuote.id, "APPROVED")}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-1.5 px-3.5 rounded-lg flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Approve Proposal</span>
-                  </button>
-                  <button
-                    onClick={() => handleUpdateStatus(selectedQuote.id, "REJECTED")}
-                    className="border border-rose-500/25 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 text-xs font-semibold py-1.5 px-3.5 rounded-lg"
-                  >
-                    <span>Reject</span>
-                  </button>
-                </>
-              )}
+              {/* Approval workflow dropdown */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground">Status:</span>
+                <select
+                  value={selectedQuote.status}
+                  onChange={(e) => handleUpdateStatus(selectedQuote.id, e.target.value)}
+                  className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg border outline-none cursor-pointer transition-all ${
+                    selectedQuote.status === "APPROVED"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                      : selectedQuote.status === "SENT"
+                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                      : selectedQuote.status === "REJECTED"
+                      ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                      : "bg-secondary/60 text-muted-foreground border-border"
+                  }`}
+                >
+                  <option value="DRAFT" className="bg-card text-foreground font-sans">DRAFT</option>
+                  <option value="SENT" className="bg-card text-amber-400 font-sans">SENT</option>
+                  <option value="APPROVED" className="bg-card text-emerald-400 font-sans">APPROVED</option>
+                  <option value="REJECTED" className="bg-card text-rose-400 font-sans">REJECTED</option>
+                </select>
+              </div>
 
               {/* Conversion flow */}
               {selectedQuote.status === "APPROVED" && (
@@ -794,6 +735,16 @@ export default function QuotationsPage() {
                 <span>Create Revision</span>
               </button>
 
+              {selectedQuote.status === "APPROVED" && (
+                <Link
+                  href={`/invoices?convert=${selectedQuote.id}`}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-1.5 px-3.5 rounded-lg flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
+                >
+                  <Receipt className="w-4 h-4" />
+                  <span>Convert to GST Invoice</span>
+                </Link>
+              )}
+
               <button
                 onClick={() => handleDeleteQuote(selectedQuote.id)}
                 className="bg-rose-500/15 text-rose-400 hover:bg-rose-500/20 text-xs font-semibold py-1.5 px-3.5 border border-rose-500/20 rounded-lg flex items-center gap-1.5"
@@ -821,7 +772,7 @@ export default function QuotationsPage() {
                 <img src="/logo.png" alt="Logo" className="w-10 h-10 rounded object-contain shrink-0" />
 
                 <div className="flex flex-col">
-                  <span className="font-bold text-sm tracking-tight">{branding?.companyName || "KOHINOOR SHUTTERS"}</span>
+                  <span className="font-bold text-sm tracking-tight">{branding?.companyName || "KOHINOOR ROLLING SHUTTERS"}</span>
                   <span className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">Industries & Installation</span>
                 </div>
               </div>
@@ -841,7 +792,7 @@ export default function QuotationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-8 text-xs">
               <div className="space-y-2 border-r border-slate-100 pr-4">
                 <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest leading-none font-bold">Issuer / Vendor Details</span>
-                <p className="font-bold text-slate-800 leading-snug">{branding?.companyName || "Kohinoor Shutter Industries"}</p>
+                <p className="font-bold text-slate-800 leading-snug">{branding?.companyName || "Kohinoor Rolling Shutters"}</p>
                 <p className="text-slate-500">201, Industrial Development Area, GIDC, Thane, MH - 400604</p>
                 <p className="text-slate-500">GSTIN: {branding?.gstNumber || "27AAACK5912K1Z9"}</p>
                 <p className="text-slate-500">Bank: {branding?.bankName || "SBI"} | A/C: {branding?.bankAccountNo || "38927103829"} | IFSC: {branding?.bankIfsc || "SBIN0004561"}</p>
@@ -851,7 +802,7 @@ export default function QuotationsPage() {
                 <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest leading-none font-bold">Customer Details</span>
                 <p className="font-bold text-slate-800 leading-snug">{selectedQuote.customer?.name}</p>
                 {selectedQuote.customer?.companyName && (
-                  <p className="text-slate-600 font-semibold text-[11px] font-sans">Company: {selectedQuote.customer.companyName}</p>
+                  <p className="text-slate-600 font-semibold text-[11px]">Company: {selectedQuote.customer.companyName}</p>
                 )}
                 <p className="text-slate-500">{selectedQuote.customer?.billingAddress}</p>
                 <p className="text-slate-500">Phone: {selectedQuote.customer?.phone}</p>
@@ -879,9 +830,9 @@ export default function QuotationsPage() {
                   return (
                     <tr key={idx}>
                       <td className="py-3 text-slate-500 font-mono">{idx + 1}</td>
-                      <td className="py-3 font-medium text-slate-800 font-sans">
+                      <td className="py-3 font-medium text-slate-800">
                         <div className="font-bold text-slate-900">{item.shutterName || `Rolling Shutter ${idx + 1}`}</div>
-                        <div className="text-[10px] text-slate-500 font-sans font-medium mt-0.5">
+                        <div className="text-[10px] text-slate-500 font-medium mt-0.5">
                           Specs: {item.material} {item.thickness} {item.profile} | {item.operationType} {item.motorType && `(${item.motorType})`} {item.color && `| Color: ${item.color}`}
                         </div>
                       </td>
@@ -898,9 +849,8 @@ export default function QuotationsPage() {
               </tbody>
             </table>
 
-            {/* Total breakdown without GST or payment QR options */}
+            {/* Total breakdown */}
             <div className="flex justify-end pt-6 border-t border-slate-200">
-              {/* Numeric summation */}
               <div className="w-full sm:w-72 flex flex-col gap-2 text-xs">
                 <div className="flex justify-between text-slate-500">
                   <span>Subtotal</span>
@@ -941,509 +891,716 @@ export default function QuotationsPage() {
         </div>
       )}
 
-      {/* Add Quotation Form Modal */}
+      {/* Add Quotation Step-by-Step Wizard Modal */}
       {showAddQuote && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-5 border-b border-border flex justify-between items-center bg-secondary/15">
-              <h3 className="font-heading font-semibold text-sm">Draft New Quotation Proposal</h3>
-              <button onClick={() => setShowAddQuote(false)} className="text-muted-foreground hover:text-foreground text-xs font-semibold">
-                Cancel
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="w-full max-w-5xl bg-card border border-border/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto">
             
-            <form onSubmit={handleCreateQuotation} className="p-6 overflow-y-auto space-y-5">
-              {/* Customer Selector Block */}
-              <div className="bg-secondary/10 p-4 border border-border/60 rounded-xl space-y-4">
-                <div className="flex items-center justify-between border-b border-border/30 pb-2">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">Customer Configuration</span>
-                  <div className="flex border rounded overflow-hidden text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setIsNewCustomer(false)}
-                      className={`px-3 py-1 font-semibold transition-all ${!isNewCustomer ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"}`}
-                    >
-                      Existing Customer
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsNewCustomer(true)}
-                      className={`px-3 py-1 font-semibold transition-all flex items-center gap-1 ${isNewCustomer ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"}`}
-                    >
-                      <UserPlus className="w-3 h-3" />
-                      <span>Create New</span>
-                    </button>
+            {/* Modal Header & Wizard Navigation Bar */}
+            <div className="bg-secondary/30 border-b border-border px-6 py-4 flex flex-col gap-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 text-primary rounded-xl">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-bold text-base text-foreground">Draft New Quotation Proposal</h3>
+                    <p className="text-xs text-muted-foreground">Configure shutter specifications, customer details, and pricing</p>
                   </div>
                 </div>
 
-                {!isNewCustomer ? (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Select Customer Profile</label>
-                    <select
-                      required={!isNewCustomer}
-                      value={formCustId}
-                      onChange={(e) => setFormCustId(e.target.value)}
-                      className="w-full bg-secondary/40 border border-border rounded-md px-3 py-2 text-xs outline-none text-foreground font-semibold"
-                    >
-                      <option value="" className="bg-card">Select Customer Registry...</option>
-                      {customers.map((c) => (
-                        <option key={c.id} value={c.id} className="bg-card">
-                          {c.name} {c.companyName ? `(${c.companyName})` : ""} - {c.phone}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono uppercase text-muted-foreground">Customer Name</label>
-                      <input
-                        type="text"
-                        required={isNewCustomer}
-                        placeholder="Anil Sharma"
-                        value={newCustName}
-                        onChange={(e) => setNewCustName(e.target.value)}
-                        className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground font-semibold"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono uppercase text-muted-foreground">Company Name</label>
-                      <input
-                        type="text"
-                        placeholder="Metro Retailers Ltd"
-                        value={newCustCompanyName}
-                        onChange={(e) => setNewCustCompanyName(e.target.value)}
-                        className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground font-semibold"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono uppercase text-muted-foreground">Customer Type</label>
-                      <select
-                        value={newCustType}
-                        onChange={(e) => setNewCustType(e.target.value as any)}
-                        className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1.5 text-xs outline-none text-foreground"
-                      >
-                        <option value="COMPANY" className="bg-card text-foreground">Company</option>
-                        <option value="INDIVIDUAL" className="bg-card text-foreground">Individual</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1 font-mono">
-                      <label className="text-[10px] font-mono uppercase text-muted-foreground">Phone Number</label>
-                      <input
-                        type="text"
-                        required={isNewCustomer}
-                        placeholder="+91 98765..."
-                        value={newCustPhone}
-                        onChange={(e) => setNewCustPhone(e.target.value)}
-                        className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground"
-                      />
-                    </div>
-                    <div className="space-y-1 font-mono">
-                      <label className="text-[10px] font-mono uppercase text-muted-foreground">WhatsApp No.</label>
-                      <input
-                        type="text"
-                        placeholder="+91 98765..."
-                        value={newCustWhatsapp}
-                        onChange={(e) => setNewCustWhatsapp(e.target.value)}
-                        className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono uppercase text-muted-foreground">Email Address</label>
-                      <input
-                        type="email"
-                        placeholder="name@company.com"
-                        value={newCustEmail}
-                        onChange={(e) => setNewCustEmail(e.target.value)}
-                        className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground"
-                      />
-                    </div>
-                    <div className="space-y-1 font-mono md:col-span-1">
-                      <label className="text-[10px] font-mono uppercase text-muted-foreground">GSTIN Identification</label>
-                      <input
-                        type="text"
-                        placeholder="27AAACK5..."
-                        value={newCustGst}
-                        onChange={(e) => setNewCustGst(e.target.value)}
-                        className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground"
-                      />
-                    </div>
-                    <div className="space-y-1 md:col-span-2">
-                      <label className="text-[10px] font-mono uppercase text-muted-foreground">Billing Address</label>
-                      <input
-                        type="text"
-                        required={isNewCustomer}
-                        placeholder="Complete billing location info"
-                        value={newCustBilling}
-                        onChange={(e) => setNewCustBilling(e.target.value)}
-                        className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground"
-                      />
-                    </div>
-                  </div>
-                )}
+                <button 
+                  onClick={() => setShowAddQuote(false)} 
+                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
+              {/* Wizard Step Tabs */}
+              <div className="grid grid-cols-3 gap-2 bg-background/60 p-1.5 rounded-xl border border-border/50">
+                <button
+                  type="button"
+                  onClick={() => setWizardStep(1)}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                    wizardStep === 1 
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
+                      : (formCustId || (isNewCustomer && newCustName)) 
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+                      : "text-muted-foreground hover:bg-secondary/40"
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">1. Customer Info</span>
+                  <span className="sm:hidden">1. Customer</span>
+                  {(formCustId || (isNewCustomer && newCustName)) && wizardStep !== 1 && (
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  )}
+                </button>
 
-              {/* Dynamic Materials items Table */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center border-b border-border/40 pb-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
-                    Materials Master Items Configuration Ledger
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addItemRow}
-                    className="text-xs text-primary hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Shutter</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setWizardStep(2)}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                    wizardStep === 2 
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
+                      : "text-muted-foreground hover:bg-secondary/40"
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">2. Shutter Configurator ({formItems.length})</span>
+                  <span className="sm:hidden">2. Shutters ({formItems.length})</span>
+                </button>
 
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                  {formItems.map((item, idx) => (
-                    <div key={idx} className="flex flex-wrap items-end gap-3 border border-border/40 p-3.5 rounded-lg bg-card/10 hover:border-border transition-all select-none font-sans text-xs">
-                      {/* Shutter Name */}
-                      <div className="flex-1 min-w-[150px] space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Shutter Name</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Warehouse entrance"
-                          value={item.shutterName || ""}
-                          onChange={(e) => updateItemRow(idx, "shutterName", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
-                        />
-                      </div>
+                <button
+                  type="button"
+                  onClick={() => setWizardStep(3)}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                    wizardStep === 3 
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
+                      : "text-muted-foreground hover:bg-secondary/40"
+                  }`}
+                >
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">3. Summary & Terms</span>
+                  <span className="sm:hidden">3. Summary</span>
+                </button>
+              </div>
+            </div>
+            
+            {/* Modal Body Form */}
+            <form onSubmit={handleCreateQuotation} className="flex-grow overflow-y-auto p-6 space-y-6">
+              
+              {/* STEP 1: CUSTOMER SELECTION & PROFILE REGISTRATION */}
+              {wizardStep === 1 && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-secondary/15 p-4 rounded-xl border border-border/60">
+                    <div>
+                      <h4 className="font-semibold text-sm text-foreground">Customer Registry</h4>
+                      <p className="text-xs text-muted-foreground">Select an existing customer or create a new profile inline</p>
+                    </div>
 
-                      {/* Dimensions: Width & Height */}
-                      <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Width (Ft)</label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="W"
-                          value={item.width || ""}
-                          onChange={(e) => updateItemRow(idx, "width", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center"
-                        />
-                      </div>
+                    <div className="flex bg-background border border-border p-1 rounded-xl text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setIsNewCustomer(false)}
+                        className={`px-4 py-1.5 font-semibold rounded-lg transition-all ${!isNewCustomer ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        Existing Customer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsNewCustomer(true)}
+                        className={`px-4 py-1.5 font-semibold rounded-lg transition-all flex items-center gap-1.5 ${isNewCustomer ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Create New</span>
+                      </button>
+                    </div>
+                  </div>
 
-                      <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Height (Ft)</label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="H"
-                          value={item.height || ""}
-                          onChange={(e) => updateItemRow(idx, "height", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center"
-                        />
-                      </div>
-
-                      {/* Material (GI / ZN / PPGI) */}
-                      <div className="w-20 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Material</label>
+                  {!isNewCustomer ? (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                          <User className="w-4 h-4 text-primary" />
+                          <span>Select Customer Profile</span>
+                        </label>
                         <select
-                          value={item.material || "GI"}
-                          onChange={(e) => updateItemRow(idx, "material", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
+                          required={!isNewCustomer}
+                          value={formCustId}
+                          onChange={(e) => setFormCustId(e.target.value)}
+                          className="w-full bg-secondary/30 border border-border/80 rounded-xl px-4 py-3 text-xs outline-none text-foreground font-semibold focus:border-primary transition-all"
                         >
-                          <option value="GI" className="bg-card">GI</option>
-                          <option value="ZN" className="bg-card">ZN</option>
-                          <option value="PPGI" className="bg-card">PPGI</option>
-                        </select>
-                      </div>
-
-                      {/* Thickness Gauge */}
-                      <div className="w-20 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Gauge</label>
-                        <select
-                          value={item.thickness || "21G"}
-                          onChange={(e) => updateItemRow(idx, "thickness", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold font-mono"
-                        >
-                          {thicknessList.map((mi) => (
-                            <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
+                          <option value="" className="bg-card text-foreground">Choose customer from registry...</option>
+                          {customers.map((c) => (
+                            <option key={c.id} value={c.id} className="bg-card text-foreground">
+                              {c.name} {c.companyName ? `(${c.companyName})` : ""} - {c.phone}
+                            </option>
                           ))}
                         </select>
                       </div>
 
-                      {/* Profile (Flat / Semi / Half Round / Round) */}
-                      <div className="w-24 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Profile</label>
-                        <select
-                          value={item.profile || "Flat"}
-                          onChange={(e) => updateItemRow(idx, "profile", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
-                        >
-                          <option value="Flat" className="bg-card">Flat</option>
-                          <option value="Semi" className="bg-card">Semi</option>
-                          <option value="Half Round" className="bg-card">Half Round</option>
-                          <option value="Round" className="bg-card">Round</option>
-                        </select>
-                      </div>
-
-                      {/* Color */}
-                      <div className="w-20 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Color</label>
+                      {/* Selected Customer Preview Card */}
+                      {selectedCustomerObj && (
+                        <div className="bg-primary/5 border border-primary/20 p-5 rounded-2xl space-y-3">
+                          <div className="flex items-center justify-between border-b border-primary/10 pb-2">
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-primary font-bold">Selected Customer Preview</span>
+                            <span className="text-xs font-semibold bg-primary/10 text-primary px-2.5 py-0.5 rounded-md">
+                              {selectedCustomerObj.companyName ? "Corporate Client" : "Individual Client"}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                            <div>
+                              <span className="text-muted-foreground text-[10px] uppercase block">Customer Name</span>
+                              <span className="font-bold text-foreground">{selectedCustomerObj.name}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground text-[10px] uppercase block">Phone / WhatsApp</span>
+                              <span className="font-mono font-semibold text-foreground">{selectedCustomerObj.phone}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground text-[10px] uppercase block">GSTIN</span>
+                              <span className="font-mono text-muted-foreground">{selectedCustomerObj.gstNumber || "N/A"}</span>
+                            </div>
+                            <div className="md:col-span-3">
+                              <span className="text-muted-foreground text-[10px] uppercase block">Billing Address</span>
+                              <span className="text-foreground">{selectedCustomerObj.billingAddress}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Inline New Customer Creation Form */
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-secondary/10 p-5 rounded-2xl border border-border/60 text-xs">
+                      <div className="space-y-1.5">
+                        <label className="font-semibold text-foreground">Customer Full Name *</label>
                         <input
                           type="text"
-                          value={item.color || ""}
-                          onChange={(e) => updateItemRow(idx, "color", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
+                          required={isNewCustomer}
+                          placeholder="e.g. Anil Sharma"
+                          value={newCustName}
+                          onChange={(e) => setNewCustName(e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary text-foreground font-semibold"
                         />
                       </div>
 
-                      {/* Operation Type (Manual / Motorized) */}
-                      <div className="w-24 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Operation</label>
+                      <div className="space-y-1.5">
+                        <label className="font-semibold text-foreground">Company Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Metro Retailers Ltd"
+                          value={newCustCompanyName}
+                          onChange={(e) => setNewCustCompanyName(e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary text-foreground font-semibold"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-semibold text-foreground">Client Type</label>
                         <select
-                          value={item.operationType || "Manual"}
-                          onChange={(e) => updateItemRow(idx, "operationType", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground font-semibold"
+                          value={newCustType}
+                          onChange={(e) => setNewCustType(e.target.value as any)}
+                          className="w-full bg-secondary/40 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary text-foreground"
                         >
-                          <option value="Manual" className="bg-card">Manual</option>
-                          <option value="Motorized" className="bg-card">Motorized</option>
+                          <option value="COMPANY" className="bg-card">Company</option>
+                          <option value="INDIVIDUAL" className="bg-card">Individual</option>
                         </select>
                       </div>
 
-                      {/* Motor Type */}
-                      <div className="w-28 space-y-1">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase">Motor Type</label>
-                        <select
-                          disabled={item.operationType !== "Motorized"}
-                          value={item.motorType || ""}
-                          onChange={(e) => updateItemRow(idx, "motorType", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground disabled:opacity-30 font-semibold"
+                      <div className="space-y-1.5 font-mono">
+                        <label className="font-semibold text-foreground font-sans">Phone Number *</label>
+                        <input
+                          type="text"
+                          required={isNewCustomer}
+                          placeholder="+91 98765 43210"
+                          value={newCustPhone}
+                          onChange={(e) => setNewCustPhone(e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary text-foreground"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5 font-mono">
+                        <label className="font-semibold text-foreground font-sans">WhatsApp Number</label>
+                        <input
+                          type="text"
+                          placeholder="+91 98765 43210"
+                          value={newCustWhatsapp}
+                          onChange={(e) => setNewCustWhatsapp(e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary text-foreground"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="font-semibold text-foreground">Email Address</label>
+                        <input
+                          type="email"
+                          placeholder="client@company.com"
+                          value={newCustEmail}
+                          onChange={(e) => setNewCustEmail(e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary text-foreground"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5 font-mono md:col-span-1">
+                        <label className="font-semibold text-foreground font-sans">GSTIN Number</label>
+                        <input
+                          type="text"
+                          placeholder="27AAACK5912K1Z9"
+                          value={newCustGst}
+                          onChange={(e) => setNewCustGst(e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary text-foreground"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="font-semibold text-foreground">Billing Address *</label>
+                        <input
+                          type="text"
+                          required={isNewCustomer}
+                          placeholder="Complete site/billing location address"
+                          value={newCustBilling}
+                          onChange={(e) => setNewCustBilling(e.target.value)}
+                          className="w-full bg-secondary/40 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary text-foreground"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-4 border-t border-border/40">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isNewCustomer && !formCustId) {
+                          alert("Please select a customer before continuing.");
+                          return;
+                        }
+                        if (isNewCustomer && (!newCustName || !newCustPhone || !newCustBilling)) {
+                          alert("Name, Phone, and Billing Address are required for new customer registry.");
+                          return;
+                        }
+                        setWizardStep(2);
+                      }}
+                      className="bg-primary text-primary-foreground hover:bg-primary/95 font-semibold px-6 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-primary/20"
+                    >
+                      <span>Proceed to Shutter Configurations</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: STRUCTURED SHUTTER CONFIGURATOR CARDS */}
+              {wizardStep === 2 && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  
+                  {/* Quick Shutter Presets & Live Summary Bar */}
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-secondary/20 p-4 rounded-2xl border border-border/80">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 text-amber-400" />
+                        Quick Preset Templates
+                      </span>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => addPresetShutter("SHOP")}
+                          className="bg-background hover:bg-secondary border border-border text-foreground text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
                         >
-                          <option value="">No Motor</option>
-                          {masterItems
-                            .filter(mi => mi.category === "Motors" && !mi.isDisabled)
-                            .map((mi) => (
-                              <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
-                            ))}
-                        </select>
+                          <Plus className="w-3 h-3 text-primary" />
+                          <span>Standard Shop (10×8 Ft Manual)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addPresetShutter("INDUSTRIAL")}
+                          className="bg-background hover:bg-secondary border border-border text-foreground text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                        >
+                          <Plus className="w-3 h-3 text-primary" />
+                          <span>Industrial Heavy (15×12 Ft Motorized)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addPresetShutter("COMMERCIAL")}
+                          className="bg-background hover:bg-secondary border border-border text-foreground text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                        >
+                          <Plus className="w-3 h-3 text-primary" />
+                          <span>Commercial PPGI (12×10 Ft Motorized)</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={addItemRow}
+                      className="bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-md shadow-primary/20 shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Custom Shutter</span>
+                    </button>
+                  </div>
+
+                  {/* List of Structured Shutter Cards */}
+                  <div className="space-y-4">
+                    {formItems.map((item, idx) => {
+                      const width = parseFloat(item.width) || 0;
+                      const height = parseFloat(item.height) || 0;
+                      const areaSft = width * height;
+                      const qty = parseInt(item.quantity) || 1;
+                      const pricePerSft = areaSft > 0 ? Math.round(item.unitPrice / areaSft) : 0;
+
+                      return (
+                        <div key={idx} className="bg-card border border-border rounded-2xl shadow-sm hover:border-primary/50 transition-all p-5 space-y-4">
+                          
+                          {/* Card Header */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
+                            <div className="flex items-center gap-3">
+                              <span className="bg-primary/10 text-primary font-mono font-bold text-xs px-2.5 py-1 rounded-lg">
+                                #{idx + 1}
+                              </span>
+                              <input
+                                type="text"
+                                placeholder="Shutter identifier name..."
+                                value={item.shutterName || ""}
+                                onChange={(e) => updateItemRow(idx, "shutterName", e.target.value)}
+                                className="bg-secondary/30 border border-border/80 hover:border-primary/40 focus:border-primary rounded-lg px-3 py-1 text-xs outline-none text-foreground font-bold min-w-[200px]"
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-3 shrink-0">
+                              {/* Live Computed Area Badge */}
+                              <span className="bg-secondary text-foreground text-xs font-mono font-bold px-3 py-1 rounded-lg border border-border/80 flex items-center gap-1.5">
+                                <Maximize2 className="w-3.5 h-3.5 text-primary" />
+                                {width}Ft × {height}Ft = <span className="text-primary font-black">{areaSft} Sft</span>
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() => duplicateItemRow(idx)}
+                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg border border-border/60 transition-colors"
+                                title="Duplicate this shutter"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => removeItemRow(idx)}
+                                className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg border border-rose-500/20 transition-colors"
+                                title="Remove shutter"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Form Grid Section 1: Dimensions & Quantity */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-secondary/10 p-3.5 rounded-xl border border-border/40">
+                            <div className="space-y-1 font-mono">
+                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Width (Feet)</label>
+                              <input
+                                type="number"
+                                step="any"
+                                required
+                                placeholder="Width"
+                                value={item.width || ""}
+                                onChange={(e) => updateItemRow(idx, "width", e.target.value)}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground font-bold outline-none focus:border-primary text-center"
+                              />
+                            </div>
+
+                            <div className="space-y-1 font-mono">
+                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Height (Feet)</label>
+                              <input
+                                type="number"
+                                step="any"
+                                required
+                                placeholder="Height"
+                                value={item.height || ""}
+                                onChange={(e) => updateItemRow(idx, "height", e.target.value)}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground font-bold outline-none focus:border-primary text-center"
+                              />
+                            </div>
+
+                            <div className="space-y-1 font-mono">
+                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Quantity (Nos)</label>
+                              <input
+                                type="number"
+                                required
+                                min="1"
+                                value={item.quantity || "1"}
+                                onChange={(e) => updateItemRow(idx, "quantity", e.target.value)}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground font-bold outline-none focus:border-primary text-center"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Color Finish</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Slate Grey"
+                                value={item.color || ""}
+                                onChange={(e) => updateItemRow(idx, "color", e.target.value)}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground font-semibold outline-none focus:border-primary"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Form Grid Section 2: Material & Specs */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Material</label>
+                              <select
+                                value={item.material || "GI"}
+                                onChange={(e) => updateItemRow(idx, "material", e.target.value)}
+                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary"
+                              >
+                                <option value="GI" className="bg-card">GI (Galvanized Iron)</option>
+                                <option value="ZN" className="bg-card">ZN (Zinc Coated)</option>
+                                <option value="PPGI" className="bg-card">PPGI (Pre-Painted GI)</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-1 font-mono">
+                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Gauge / Thickness</label>
+                              <select
+                                value={item.thickness || "21G"}
+                                onChange={(e) => updateItemRow(idx, "thickness", e.target.value)}
+                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary font-mono"
+                              >
+                                {thicknessList.map((mi) => (
+                                  <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Profile Shape</label>
+                              <select
+                                value={item.profile || "Flat"}
+                                onChange={(e) => updateItemRow(idx, "profile", e.target.value)}
+                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary"
+                              >
+                                <option value="Flat" className="bg-card">Flat Slat</option>
+                                <option value="Semi" className="bg-card">Semi Curved</option>
+                                <option value="Half Round" className="bg-card">Half Round</option>
+                                <option value="Round" className="bg-card">Round Slat</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Operation Type</label>
+                              <select
+                                value={item.operationType || "Manual"}
+                                onChange={(e) => updateItemRow(idx, "operationType", e.target.value)}
+                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary"
+                              >
+                                <option value="Manual" className="bg-card">Manual Drive</option>
+                                <option value="Motorized" className="bg-card text-emerald-400">Motorized Drive</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+                                Motor Drive Model {item.operationType === "Manual" && "(Requires Motorized)"}
+                              </label>
+                              <select
+                                disabled={item.operationType !== "Motorized"}
+                                value={item.motorType || ""}
+                                onChange={(e) => updateItemRow(idx, "motorType", e.target.value)}
+                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary disabled:opacity-30"
+                              >
+                                <option value="">Select Motorized Model...</option>
+                                {masterItems
+                                  .filter(mi => mi.category === "Motors" && !mi.isDisabled)
+                                  .map((mi) => (
+                                    <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
+                                  ))}
+                              </select>
+                            </div>
+
+                            {/* Section 3: Rate & Line Total */}
+                            <div className="space-y-1 font-mono md:col-span-2">
+                              <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Unit Selling Rate (₹)</label>
+                                {pricePerSft > 0 && (
+                                  <span className="text-[10px] font-sans text-muted-foreground">≈ ₹{pricePerSft} / Sft</span>
+                                )}
+                              </div>
+                              <input
+                                type="number"
+                                required
+                                value={item.unitPrice || "0"}
+                                onChange={(e) => updateItemRow(idx, "unitPrice", e.target.value)}
+                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs text-right text-emerald-400 font-bold outline-none focus:border-primary"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Footer Line Total */}
+                          <div className="flex justify-end items-center gap-3 pt-3 border-t border-border/40 font-mono">
+                            <span className="text-xs text-muted-foreground">Line Total:</span>
+                            <span className="text-base font-black text-foreground">
+                              ₹{(item.lineTotal || 0).toLocaleString("en-IN")}
+                            </span>
+                          </div>
+
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Wizard Step 2 Footer Navigation */}
+                  <div className="flex justify-between items-center pt-4 border-t border-border/40">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(1)}
+                      className="bg-secondary hover:bg-secondary/80 text-foreground font-semibold px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 border border-border"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>Back: Customer Info</span>
+                    </button>
+
+                    <div className="flex items-center gap-4">
+                      <div className="hidden sm:flex flex-col text-right font-mono text-xs">
+                        <span className="text-[10px] text-muted-foreground uppercase">Subtotal ({formItems.length} Shutters):</span>
+                        <span className="font-bold text-foreground">₹{totalFormSubtotal.toLocaleString("en-IN")}</span>
                       </div>
 
-                      {/* Qty */}
-                      <div className="w-16 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase font-bold">Qty</label>
-                        <input
-                          type="number"
-                          required
-                          value={item.quantity || "1"}
-                          onChange={(e) => updateItemRow(idx, "quantity", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-center font-bold"
-                        />
-                      </div>
-
-                      {/* Rate */}
-                      <div className="w-24 space-y-1 font-mono">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase font-bold">Rate (₹)</label>
-                        <input
-                          type="number"
-                          required
-                          value={item.unitPrice || "0"}
-                          onChange={(e) => updateItemRow(idx, "unitPrice", e.target.value)}
-                          className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground text-right font-bold text-emerald-400"
-                        />
-                      </div>
-
-                      {/* Total price */}
-                      <div className="w-24 text-right font-bold text-foreground font-mono leading-none pb-2 text-xs">
-                        ₹{(item.lineTotal || 0).toLocaleString("en-IN")}
-                      </div>
-
-                      {/* Configure Materials (BOM) Trigger */}
                       <button
                         type="button"
-                        onClick={() => openBOMConfigurator(idx)}
-                        className="text-[10px] bg-secondary hover:bg-secondary/80 border border-border/80 text-foreground font-bold px-2.5 py-1.5 rounded transition-all shrink-0 mb-0.5 uppercase tracking-wider font-mono hover:text-primary hover:border-primary"
+                        onClick={() => setWizardStep(3)}
+                        className="bg-primary text-primary-foreground hover:bg-primary/95 font-semibold px-6 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-primary/20"
                       >
-                        BOM
-                      </button>
-
-                      {/* Remove Button */}
-                      <button
-                        type="button"
-                        onClick={() => removeItemRow(idx)}
-                        className="text-destructive hover:bg-destructive/10 p-1.5 border border-transparent hover:border-destructive/20 rounded shrink-0 mb-0.5"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Proceed to Pricing & Terms</span>
+                        <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
-                  ))}
+                  </div>
+
                 </div>
-              </div>
+              )}
 
-              {/* Status & Discount selectors (No GST on Quotation) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border/40 pt-4 font-sans">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Quotation Stage</label>
-                  <select
-                    value={formStatus}
-                    onChange={(e) => setFormStatus(e.target.value as any)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-2 text-xs outline-none text-foreground font-semibold"
-                  >
-                    <option value="DRAFT" className="bg-card">Draft</option>
-                    <option value="SENT" className="bg-card">Sent</option>
-                    <option value="APPROVED" className="bg-card text-emerald-400">Approved</option>
-                  </select>
+              {/* STEP 3: PRICING, TERMS & FINAL CONFIRMATION */}
+              {wizardStep === 3 && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  
+                  {/* Final Quote Summary Breakdown Card */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    {/* Left 2 Cols: Stage, Discount & Terms */}
+                    <div className="md:col-span-2 space-y-5">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">Quotation Initial Stage</label>
+                          <select
+                            value={formStatus}
+                            onChange={(e) => setFormStatus(e.target.value as any)}
+                            className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-2.5 text-xs outline-none text-foreground font-semibold focus:border-primary"
+                          >
+                            <option value="DRAFT" className="bg-card">Draft (Internal Review)</option>
+                            <option value="SENT" className="bg-card">Sent to Customer</option>
+                            <option value="APPROVED" className="bg-card text-emerald-400">Approved by Client</option>
+                            <option value="REJECTED" className="bg-card text-rose-400">Rejected</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5 font-mono">
+                          <label className="text-xs font-semibold text-foreground font-sans">Special Discount Deduction (₹)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            value={formDiscount}
+                            onChange={(e) => setFormDiscount(e.target.value)}
+                            className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-2 text-xs outline-none text-foreground font-bold focus:border-primary"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Payment Terms & Conditions */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-semibold text-foreground">Terms & Conditions Statement</label>
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setFormTerms("1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client.")}
+                              className="text-[10px] bg-secondary hover:bg-secondary/80 border px-2 py-0.5 rounded text-muted-foreground"
+                            >
+                              Standard Terms
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormTerms("1. 100% advance against proforma invoice.\n2. Delivery within 7 working days from site approval.")}
+                              className="text-[10px] bg-secondary hover:bg-secondary/80 border px-2 py-0.5 rounded text-muted-foreground"
+                            >
+                              100% Advance
+                            </button>
+                          </div>
+                        </div>
+
+                        <textarea
+                          rows={4}
+                          value={formTerms}
+                          onChange={(e) => setFormTerms(e.target.value)}
+                          className="w-full bg-secondary/30 border border-border rounded-xl p-3 text-xs outline-none text-foreground resize-none focus:border-primary leading-relaxed"
+                        />
+                      </div>
+
+                    </div>
+
+                    {/* Right Col: Live Calculation Ledger Summary Card */}
+                    <div className="bg-secondary/15 border border-border p-5 rounded-2xl flex flex-col justify-between space-y-4 font-mono">
+                      <div className="space-y-3">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block border-b border-border/40 pb-2">
+                          Calculated Financial Summary
+                        </span>
+
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Total Configured Shutters</span>
+                          <span className="font-bold text-foreground">{formItems.length} Nos</span>
+                        </div>
+
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Total Combined Area</span>
+                          <span className="font-bold text-foreground">{totalFormArea} Sft</span>
+                        </div>
+
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Gross Subtotal</span>
+                          <span className="font-bold text-foreground">₹{totalFormSubtotal.toLocaleString("en-IN")}</span>
+                        </div>
+
+                        {parseFloat(formDiscount) > 0 && (
+                          <div className="flex justify-between text-xs text-rose-400">
+                            <span>Discount Subtracted</span>
+                            <span>- ₹{parseFloat(formDiscount).toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+
+                        <div className="pt-3 border-t border-border/60">
+                          <span className="text-[10px] uppercase text-muted-foreground block font-sans">Final Estimated Amount</span>
+                          <span className="text-2xl font-black text-foreground block tracking-tight">
+                            ₹{netFormTotal.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-primary/10 border border-primary/20 p-3 rounded-xl text-[11px] font-sans text-primary">
+                        <span className="font-bold block">Ready for Generation</span>
+                        <span>This document will be assigned quote ID and saved to your CRM ledger.</span>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Wizard Step 3 Footer CTA */}
+                  <div className="flex justify-between items-center pt-4 border-t border-border/40">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(2)}
+                      className="bg-secondary hover:bg-secondary/80 text-foreground font-semibold px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 border border-border"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>Back: Shutters Config</span>
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="bg-primary text-primary-foreground font-bold px-8 py-3 rounded-xl text-xs hover:bg-primary/95 shadow-xl shadow-primary/25 cursor-pointer flex items-center gap-2 hover:scale-[1.01] transition-all"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Draft and Store Quotation Proposal</span>
+                    </button>
+                  </div>
+
                 </div>
+              )}
 
-                <div className="space-y-1 font-mono">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Discount Deducted</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={formDiscount}
-                    onChange={(e) => setFormDiscount(e.target.value)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1 font-sans">
-                <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Quotation Terms & Conditions</label>
-                <textarea
-                  rows={2}
-                  value={formTerms}
-                  onChange={(e) => setFormTerms(e.target.value)}
-                  className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground resize-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-primary text-primary-foreground font-semibold py-2.5 rounded-lg text-xs hover:bg-primary/95 shadow-md shadow-primary/25 cursor-pointer font-sans"
-              >
-                Draft and Store Quotation
-              </button>
             </form>
-          </div>
-        </div>
-      )}
-      {/* Bill of Materials (BOM) Configurator Dialog */}
-      {showBomConfigModal && bomShutterIndex !== null && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-border flex justify-between items-center bg-secondary/15">
-              <div>
-                <h3 className="font-heading font-semibold text-sm">Configure Bill of Materials (BOM)</h3>
-                <p className="text-[10px] text-muted-foreground font-mono uppercase mt-0.5">
-                  Internal manufacturing list for Shutter: {formItems[bomShutterIndex]?.shutterName}
-                </p>
-              </div>
-              <button 
-                onClick={() => { setShowBomConfigModal(false); setBomShutterIndex(null); }} 
-                className="text-muted-foreground hover:text-foreground text-xs font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto space-y-4 font-sans text-xs">
-              <div className="bg-secondary/10 p-3.5 rounded-lg border border-border/50 grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-[10px]">
-                <div>
-                  <span className="text-muted-foreground block uppercase">Size</span>
-                  <span className="font-bold text-foreground">{formItems[bomShutterIndex]?.width}Ft x {formItems[bomShutterIndex]?.height}Ft</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block uppercase">Material Spec</span>
-                  <span className="font-bold text-foreground">{formItems[bomShutterIndex]?.material} ({formItems[bomShutterIndex]?.thickness})</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block uppercase">Profile</span>
-                  <span className="font-bold text-foreground">{formItems[bomShutterIndex]?.profile}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block uppercase">Operation</span>
-                  <span className="font-bold text-foreground">{formItems[bomShutterIndex]?.operationType} {formItems[bomShutterIndex]?.motorType && `(${formItems[bomShutterIndex]?.motorType})`}</span>
-                </div>
-              </div>
-
-              <div className="border border-border rounded-lg overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-secondary/30 border-b border-border font-mono text-[10px] uppercase text-muted-foreground">
-                      <th className="p-2.5">Material Name</th>
-                      <th className="p-2.5">Specification</th>
-                      <th className="p-2.5 text-center w-24">Qty</th>
-                      <th className="p-2.5 text-center w-16">Unit</th>
-                      <th className="p-2.5 text-right w-24">Rate (₹)</th>
-                      <th className="p-2.5 text-right w-28">Total Price (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {editingBomItems.map((bom, bIdx) => (
-                      <tr key={bIdx} className="hover:bg-secondary/10">
-                        <td className="p-2.5 font-bold text-foreground">{bom.materialName}</td>
-                        <td className="p-2.5">
-                          <input
-                            type="text"
-                            value={bom.specification || ""}
-                            onChange={(e) => updateBomItemField(bIdx, "specification", e.target.value)}
-                            className="w-full bg-secondary/20 border border-border/80 rounded px-2 py-0.5 text-xs outline-none text-foreground font-semibold"
-                          />
-                        </td>
-                        <td className="p-2.5 text-center font-mono">
-                          <input
-                            type="number"
-                            step="any"
-                            value={bom.quantity || ""}
-                            onChange={(e) => updateBomItemField(bIdx, "quantity", e.target.value)}
-                            className="w-20 bg-secondary/20 border border-border/80 rounded px-1.5 py-0.5 text-xs text-center outline-none text-foreground font-bold"
-                          />
-                        </td>
-                        <td className="p-2.5 text-center font-mono">
-                          <input
-                            type="text"
-                            value={bom.unit || ""}
-                            onChange={(e) => updateBomItemField(bIdx, "unit", e.target.value)}
-                            className="w-12 bg-secondary/20 border border-border/80 rounded px-1 py-0.5 text-xs text-center outline-none text-foreground font-semibold"
-                          />
-                        </td>
-                        <td className="p-2.5 text-right font-mono">
-                          <input
-                            type="number"
-                            value={bom.rate || ""}
-                            onChange={(e) => updateBomItemField(bIdx, "rate", e.target.value)}
-                            className="w-20 bg-secondary/20 border border-border/80 rounded px-1.5 py-0.5 text-xs text-right outline-none text-foreground font-bold text-emerald-400"
-                          />
-                        </td>
-                        <td className="p-2.5 text-right font-mono font-bold text-foreground">
-                          ₹{(bom.totalPrice || 0).toLocaleString("en-IN")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex justify-between items-center bg-secondary/5 border border-border/40 p-3 rounded-lg font-mono">
-                <span className="font-bold text-[10px] uppercase text-muted-foreground">Estimated Manufacturing Cost:</span>
-                <span className="font-black text-foreground text-sm">
-                  ₹{editingBomItems.reduce((sum, bom) => sum + (bom.totalPrice || 0), 0).toLocaleString("en-IN")}
-                </span>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => { setShowBomConfigModal(false); setBomShutterIndex(null); }}
-                  className="bg-secondary hover:bg-secondary/80 border border-border text-foreground font-bold px-4 py-2 rounded-lg text-xs"
-                >
-                  Discard overrides
-                </button>
-                <button
-                  type="button"
-                  onClick={saveBOMConfiguration}
-                  className="bg-primary text-primary-foreground hover:bg-primary/95 font-bold px-5 py-2 rounded-lg text-xs shadow-md shadow-primary/20"
-                >
-                  Save Internal BOM
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

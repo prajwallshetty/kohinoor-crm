@@ -3,10 +3,11 @@
 import React, { useEffect, useState } from "react";
 import { 
   Plus, Search, MapPin, Building, User, Mail, Phone, FileText, 
-  ChevronRight, Check, Clock, Paperclip, DollarSign, MessageSquare, 
-  PlusCircle, Trash2, Calendar, FileCode, Receipt, CreditCard
+  ChevronRight, Check, DollarSign, MessageSquare, 
+  Trash2, Receipt, CreditCard
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { PageSkeleton } from "@/components/ui/loaders";
 
 interface Site {
   id: string;
@@ -28,8 +29,6 @@ interface Customer {
   billingAddress: string;
   shippingAddress: string;
   notes?: string;
-  contactHistoryJson?: string;
-  attachmentsJson?: string;
   createdAt?: string;
   sites: Site[];
   leads?: any[];
@@ -42,6 +41,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [loading, setLoading] = useState(true);
   
   // Add Customer Form state
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -62,16 +62,9 @@ export default function CustomersPage() {
   const [siteContactPhone, setSiteContactPhone] = useState("");
   const [siteNotes, setSiteNotes] = useState("");
 
-  // Customer Tabs and Custom Specs States
-  const [activeTab, setActiveTab] = useState<"sites" | "contacts" | "docs" | "balance" | "timeline" | "quotations" | "invoices" | "payments">("sites");
+  // Customer Tabs
+  const [activeTab, setActiveTab] = useState<"sites" | "balance" | "quotations" | "invoices" | "payments">("sites");
   const [customerNotes, setCustomerNotes] = useState("");
-
-  const [contactType, setContactType] = useState<"CALL" | "EMAIL" | "MEETING">("CALL");
-  const [contactNotes, setContactNotes] = useState("");
-
-  const [attachmentName, setAttachmentName] = useState("");
-  const [attachmentCategory, setAttachmentCategory] = useState<"PHOTO" | "DRAWING" | "CONTRACT_PDF">("PHOTO");
-  const [attachmentSizeMB, setAttachmentSizeMB] = useState("5");
 
   // Notification state
   const [notification, setNotification] = useState("");
@@ -93,109 +86,26 @@ export default function CustomersPage() {
       if (res.ok) {
         setNotification("Notes updated successfully!");
         setTimeout(() => setNotification(""), 3000);
-        // Refresh customer list
         fetchCustomers();
       }
     } catch (e) {}
   };
 
-  const handleAddContactLog = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCustomer || !contactNotes) return;
-
-    let history = [];
+  const handleDeleteCustomer = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this customer profile?")) return;
     try {
-      history = JSON.parse(selectedCustomer.contactHistoryJson || "[]");
-    } catch (err) {}
-
-    const newLog = {
-      date: new Date().toLocaleDateString("en-IN") + " " + new Date().toLocaleTimeString("en-IN"),
-      type: contactType,
-      notes: contactNotes,
-      loggedBy: user?.name || "System"
-    };
-
-    history.unshift(newLog);
-
-    try {
-      const res = await fetch("/api/customers", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: selectedCustomer.id, contactHistoryJson: JSON.stringify(history) })
-      });
-
+      const res = await fetch(`/api/customers?id=${id}`, { method: "DELETE" });
       if (res.ok) {
-        setNotification("Contact log recorded!");
+        setNotification("Customer profile deleted.");
         setTimeout(() => setNotification(""), 3000);
-        setContactNotes("");
-        // Refresh
-        const updatedRes = await fetch("/api/customers");
-        if (updatedRes.ok) {
-          const data = await updatedRes.json();
-          setCustomers(data);
-          const found = data.find((c: any) => c.id === selectedCustomer.id);
-          if (found) setSelectedCustomer(found);
-        }
-      }
-    } catch (e) {}
-  };
-
-  const handleAddAttachment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCustomer || !attachmentName) return;
-
-    let attachments = [];
-    try {
-      attachments = JSON.parse(selectedCustomer.attachmentsJson || "[]");
-    } catch (err) {}
-
-    const sizeBytes = parseFloat(attachmentSizeMB) * 1024 * 1024;
-    const newAttach = {
-      id: `att-${Date.now()}`,
-      name: attachmentName + (attachmentCategory === "PHOTO" ? ".jpg" : attachmentCategory === "DRAWING" ? ".dwg" : ".pdf"),
-      category: attachmentCategory,
-      sizeBytes,
-      uploadedAt: new Date().toLocaleDateString("en-IN")
-    };
-
-    try {
-      const storRes = await fetch("/api/storage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sizeBytes })
-      });
-      if (!storRes.ok) {
-        alert("Upload rejected: Storage quota limit exceeded!");
-        return;
-      }
-    } catch (err) {}
-
-    attachments.unshift(newAttach);
-
-    try {
-      const res = await fetch("/api/customers", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: selectedCustomer.id, attachmentsJson: JSON.stringify(attachments) })
-      });
-
-      if (res.ok) {
-        setNotification("Document uploaded successfully!");
-        setTimeout(() => setNotification(""), 3000);
-        setAttachmentName("");
-        // Refresh
-        const updatedRes = await fetch("/api/customers");
-        if (updatedRes.ok) {
-          const data = await updatedRes.json();
-          setCustomers(data);
-          const found = data.find((c: any) => c.id === selectedCustomer.id);
-          if (found) setSelectedCustomer(found);
-        }
+        fetchCustomers();
+        setSelectedCustomer(null);
       }
     } catch (e) {}
   };
 
   const fetchCustomers = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/customers");
       if (res.ok) {
@@ -206,6 +116,7 @@ export default function CustomersPage() {
         }
       }
     } catch (e) {}
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -240,7 +151,6 @@ export default function CustomersPage() {
         const newCust = await res.json();
         setNotification("Customer successfully added!");
         setTimeout(() => setNotification(""), 3000);
-        // Reset form
         setCustName("");
         setCustCompanyName("");
         setCustType("COMPANY");
@@ -251,7 +161,6 @@ export default function CustomersPage() {
         setCustBilling("");
         setCustShipping("");
         setShowAddCustomer(false);
-        // Refresh list
         fetchCustomers();
         setSelectedCustomer(newCust);
       }
@@ -281,13 +190,12 @@ export default function CustomersPage() {
       if (res.ok) {
         setNotification("Site address successfully added!");
         setTimeout(() => setNotification(""), 3000);
-        // Reset form
         setSiteAddress("");
         setSiteContactPerson("");
         setSiteContactPhone("");
         setSiteNotes("");
         setShowAddSite(false);
-        // Refresh
+        
         const updatedRes = await fetch("/api/customers");
         if (updatedRes.ok) {
           const data = await updatedRes.json();
@@ -305,8 +213,10 @@ export default function CustomersPage() {
     c.phone.includes(search)
   );
 
+  if (loading) return <PageSkeleton rows={5} />;
+
   return (
-    <div className="flex flex-col gap-6 h-full relative">
+    <div className="flex flex-col gap-6 h-full relative font-sans">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-4 right-4 bg-primary text-primary-foreground text-xs px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 border border-primary/20 animate-bounce">
@@ -330,7 +240,7 @@ export default function CustomersPage() {
 
         <button
           onClick={() => setShowAddCustomer(true)}
-          className="bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold py-2 px-4 rounded-lg flex items-center gap-2 shadow-lg shadow-primary/25 cursor-pointer"
+          className="bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold py-2.5 px-4 rounded-lg flex items-center gap-2 shadow-lg shadow-primary/25 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>New Customer Profile</span>
@@ -380,13 +290,13 @@ export default function CustomersPage() {
               {/* Header profile */}
               <div className="flex justify-between items-start border-b border-border/60 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center border text-muted-foreground shadow-sm">
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
                     {selectedCustomer.type === "COMPANY" ? <Building className="w-5 h-5" /> : <User className="w-5 h-5" />}
                   </div>
                   <div>
                     <h2 className="text-base font-bold font-heading">{selectedCustomer.name}</h2>
                     <div className="flex gap-2 items-center mt-1">
-                      <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-secondary/80 border text-muted-foreground">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary/80 border border-border text-foreground">
                         {selectedCustomer.type}
                       </span>
                       {selectedCustomer.companyName && (
@@ -397,36 +307,56 @@ export default function CustomersPage() {
                     </div>
                   </div>
                 </div>
-                {/* Pending Amount highlighted at the top */}
-                <div className="text-right flex flex-col bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-lg">
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-rose-400 font-bold">Pending Amount</span>
-                  <span className="text-sm font-bold font-mono text-rose-400 leading-none mt-1">
-                    ₹{((selectedCustomer.invoices?.reduce((sum: number, i: any) => sum + i.totalAmount, 0) || 0) - 
-                      (selectedCustomer.invoices?.reduce((sum: number, i: any) => sum + i.amountPaid, 0) || 0)).toLocaleString("en-IN")}
-                  </span>
+
+                <div className="flex items-center gap-3">
+                  {/* Delete Profile button */}
+                  <button
+                    onClick={() => handleDeleteCustomer(selectedCustomer.id)}
+                    className="p-2 bg-secondary/60 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 rounded-lg border border-border/80 transition-all cursor-pointer"
+                    title="Delete Customer Profile"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+
+                  {/* Pending Amount highlighted at the top */}
+                  <div className="text-right flex flex-col bg-rose-500/15 border border-rose-500/30 px-3.5 py-1.5 rounded-lg shadow-sm">
+                    <span className="text-[9px] font-mono uppercase tracking-wider text-rose-700 dark:text-rose-400 font-bold">Pending Amount</span>
+                    <span className="text-sm font-black font-mono text-rose-700 dark:text-rose-400 leading-none mt-1">
+                      ₹{((selectedCustomer.invoices?.reduce((sum: number, i: any) => sum + i.totalAmount, 0) || 0) - 
+                        (selectedCustomer.invoices?.reduce((sum: number, i: any) => sum + i.amountPaid, 0) || 0)).toLocaleString("en-IN")}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* General Contact Specs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-secondary/10 p-4 border border-border/40 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-secondary/15 p-4 border border-border/60 rounded-xl">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Primary Contact Phone</span>
-                  <div className="flex items-center gap-2 text-xs text-foreground font-mono">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">Primary Contact Phone</span>
+                  <div className="flex items-center gap-2 text-xs text-foreground font-mono font-semibold">
                     <Phone className="w-3.5 h-3.5 text-muted-foreground" />
                     <span>{selectedCustomer.phone}</span>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">WhatsApp Shutter Dispatch</span>
-                  <div className="flex items-center gap-2 text-xs text-foreground font-mono">
-                    <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400 font-bold">{selectedCustomer.whatsapp || selectedCustomer.phone}</span>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">WhatsApp Dispatch</span>
+                  <div className="flex items-center gap-2 text-xs font-mono">
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <a
+                      href={`https://wa.me/91${(selectedCustomer.whatsapp || selectedCustomer.phone).replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1"
+                    >
+                      <span>{selectedCustomer.whatsapp || selectedCustomer.phone}</span>
+                      <span className="text-[9px] font-sans bg-emerald-500/15 px-1.5 py-0.2 rounded border border-emerald-500/20">Chat →</span>
+                    </a>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Corporate Email</span>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">Corporate Email</span>
                   <div className="flex items-center gap-2 text-xs text-foreground font-mono">
                     <Mail className="w-3.5 h-3.5 text-muted-foreground" />
                     <span>{selectedCustomer.email || "No email stored"}</span>
@@ -434,15 +364,15 @@ export default function CustomersPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">GST Identity (IN)</span>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">GST Identity (IN)</span>
                   <div className="flex items-center gap-2 text-xs text-foreground font-mono">
                     <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span>{selectedCustomer.gstNumber || "Not Registered"}</span>
+                    <span className="font-bold">{selectedCustomer.gstNumber || "Not Registered"}</span>
                   </div>
                 </div>
 
-                <div className="space-y-1 md:col-span-2 border-t border-border/30 pt-2">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Billing Address</span>
+                <div className="space-y-1 md:col-span-2 border-t border-border/40 pt-2.5">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">Billing Address</span>
                   <div className="flex items-start gap-2 text-xs text-foreground leading-relaxed">
                     <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
                     <span>{selectedCustomer.billingAddress}</span>
@@ -450,7 +380,7 @@ export default function CustomersPage() {
                 </div>
               </div>
 
-              {/* Premium Tab Buttons */}
+              {/* Tab Buttons */}
               <div className="flex border-b border-border/60 overflow-x-auto select-none no-scrollbar">
                 <button
                   onClick={() => setActiveTab("sites")}
@@ -496,33 +426,6 @@ export default function CustomersPage() {
                 >
                   <DollarSign className="w-3.5 h-3.5" />
                   <span>Outstanding Balances</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("timeline")}
-                  className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
-                    activeTab === "timeline" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Recent Activity</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("contacts")}
-                  className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
-                    activeTab === "contacts" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Interaction Log</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("docs")}
-                  className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
-                    activeTab === "docs" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Paperclip className="w-3.5 h-3.5" />
-                  <span>Attachments</span>
                 </button>
               </div>
 
@@ -576,178 +479,25 @@ export default function CustomersPage() {
                   </div>
                 )}
 
-                {/* 2. CONTACT HISTORY TAB */}
-                {activeTab === "contacts" && (
-                  <div className="flex flex-col gap-4">
-                    <form onSubmit={handleAddContactLog} className="bg-secondary/15 p-4 rounded-lg border border-border/60 flex flex-col gap-3">
-                      <h4 className="text-xs font-bold text-foreground">Log Customer Interaction</h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        {["CALL", "EMAIL", "MEETING"].map((type) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => setContactType(type as any)}
-                            className={`py-1 text-[11px] font-semibold border rounded capitalize transition-all ${
-                              contactType === type ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            {type.toLowerCase()}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Interaction details/notes..."
-                          required
-                          value={contactNotes}
-                          onChange={(e) => setContactNotes(e.target.value)}
-                          className="flex-grow bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground"
-                        />
-                        <button
-                          type="submit"
-                          className="bg-primary text-primary-foreground font-semibold px-3 py-1.5 rounded-md text-xs hover:bg-primary/95 shadow-sm"
-                        >
-                          Log Entry
-                        </button>
-                      </div>
-                    </form>
-
-                    <div className="flex flex-col gap-3 max-h-60 overflow-y-auto">
-                      {(() => {
-                        let logs = [];
-                        try {
-                          logs = JSON.parse(selectedCustomer.contactHistoryJson || "[]");
-                        } catch (err) {}
-
-                        if (logs.length === 0) {
-                          return (
-                            <div className="text-center py-6 text-xs text-muted-foreground border border-dashed rounded-lg">
-                              No contacts logged yet.
-                            </div>
-                          );
-                        }
-
-                        return logs.map((log: any, idx: number) => (
-                          <div key={idx} className="bg-card border border-border/60 p-3 rounded-lg flex flex-col gap-1 text-xs">
-                            <div className="flex justify-between items-center text-[10px] text-muted-foreground font-mono">
-                              <span className="font-bold text-primary uppercase">{log.type}</span>
-                              <span>By: {log.loggedBy} | {log.date}</span>
-                            </div>
-                            <p className="text-foreground leading-relaxed mt-0.5">{log.notes}</p>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. ATTACHMENTS TAB */}
-                {activeTab === "docs" && (
-                  <div className="flex flex-col gap-4">
-                    <form onSubmit={handleAddAttachment} className="bg-secondary/15 p-4 rounded-lg border border-border/60 flex flex-col gap-3">
-                      <h4 className="text-xs font-bold text-foreground">Upload Drawing / Site Photo</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-mono text-muted-foreground uppercase">File Name (No Ext)</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="elevation-sketch"
-                            value={attachmentName}
-                            onChange={(e) => setAttachmentName(e.target.value)}
-                            className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1 text-xs outline-none text-foreground font-mono"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-mono text-muted-foreground uppercase">Category</label>
-                          <select
-                            value={attachmentCategory}
-                            onChange={(e) => setAttachmentCategory(e.target.value as any)}
-                            className="w-full bg-secondary/40 border border-border rounded-md px-2 py-1 text-xs outline-none text-foreground"
-                          >
-                            <option value="PHOTO">Elevation Photo</option>
-                            <option value="DRAWING">Technical Drawing</option>
-                            <option value="CONTRACT_PDF">Agreement/PDF</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-mono text-muted-foreground uppercase">Simulate Size (MB)</label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="100"
-                            value={attachmentSizeMB}
-                            onChange={(e) => setAttachmentSizeMB(e.target.value)}
-                            className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1 text-xs outline-none text-foreground font-mono"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="submit"
-                        className="bg-primary text-primary-foreground font-semibold py-1.5 rounded-lg text-xs hover:bg-primary/95 shadow-sm mt-1"
-                      >
-                        Simulate File Upload
-                      </button>
-                    </form>
-
-                    <div className="flex flex-col gap-3 max-h-60 overflow-y-auto">
-                      {(() => {
-                        let docs = [];
-                        try {
-                          docs = JSON.parse(selectedCustomer.attachmentsJson || "[]");
-                        } catch (err) {}
-
-                        if (docs.length === 0) {
-                          return (
-                            <div className="text-center py-6 text-xs text-muted-foreground border border-dashed rounded-lg">
-                              No attachments linked. Upload technical diagrams, PDFs or site images.
-                            </div>
-                          );
-                        }
-
-                        return docs.map((doc: any) => (
-                          <div key={doc.id} className="bg-card border border-border/60 p-3 rounded-lg flex justify-between items-center text-xs">
-                            <div className="flex items-center gap-2.5">
-                              <div className="bg-secondary/80 p-2 border rounded">
-                                <Paperclip className="w-4 h-4 text-muted-foreground" />
-                              </div>
-                              <div className="flex flex-col gap-0.5">
-                                <span className="font-semibold text-foreground font-mono">{doc.name}</span>
-                                <span className="text-[10px] text-muted-foreground font-mono">
-                                  Category: {doc.category} | {(doc.sizeBytes / (1024 * 1024)).toFixed(2)} MB
-                                </span>
-                              </div>
-                            </div>
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              {doc.uploadedAt}
-                            </span>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {/* 4. OUTSTANDING BALANCES TAB */}
+                {/* 2. OUTSTANDING BALANCES TAB */}
                 {activeTab === "balance" && (
                   <div className="flex flex-col gap-4">
-                    <div className="grid grid-cols-3 gap-3 bg-secondary/15 p-4 border border-border/60 rounded-lg">
+                    <div className="grid grid-cols-3 gap-3 bg-secondary/15 p-4 border border-border/60 rounded-lg font-mono text-xs">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-mono text-muted-foreground uppercase">Total Invoiced</span>
-                        <span className="text-base font-bold font-mono text-foreground">
+                        <span className="text-[9px] text-muted-foreground uppercase">Total Invoiced</span>
+                        <span className="text-base font-bold text-foreground">
                           ₹{(selectedCustomer.invoices?.reduce((sum: number, i: any) => sum + i.totalAmount, 0) || 0).toLocaleString("en-IN")}
                         </span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-mono text-muted-foreground uppercase">Amount Paid</span>
-                        <span className="text-base font-bold font-mono text-emerald-400">
+                        <span className="text-[9px] text-muted-foreground uppercase">Amount Paid</span>
+                        <span className="text-base font-bold text-emerald-400">
                           ₹{(selectedCustomer.invoices?.reduce((sum: number, i: any) => sum + i.amountPaid, 0) || 0).toLocaleString("en-IN")}
                         </span>
                       </div>
                       <div className="flex flex-col gap-1 border-l pl-3">
-                        <span className="text-[9px] font-mono text-muted-foreground uppercase">Outstanding</span>
-                        <span className="text-base font-bold font-mono text-rose-400">
+                        <span className="text-[9px] text-muted-foreground uppercase">Outstanding</span>
+                        <span className="text-base font-bold text-rose-400">
                           ₹{((selectedCustomer.invoices?.reduce((sum: number, i: any) => sum + i.totalAmount, 0) || 0) - 
                             (selectedCustomer.invoices?.reduce((sum: number, i: any) => sum + i.amountPaid, 0) || 0)).toLocaleString("en-IN")}
                         </span>
@@ -802,77 +552,7 @@ export default function CustomersPage() {
                   </div>
                 )}
 
-                {/* 5. TIMELINE TAB */}
-                {activeTab === "timeline" && (
-                  <div className="flex flex-col gap-4 font-sans">
-                    <div className="relative pl-6 border-l border-border/60 ml-2 space-y-5 py-2">
-                      <div className="relative">
-                        <div className="absolute -left-[30px] top-0 w-4 h-4 rounded-full bg-secondary border border-border flex items-center justify-center">
-                          <User className="w-2.5 h-2.5 text-muted-foreground" />
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-semibold text-foreground">Customer Registered</span>
-                          <p className="text-[10px] text-muted-foreground font-mono">
-                            {new Date(selectedCustomer.createdAt || Date.now()).toLocaleDateString("en-IN")}
-                          </p>
-                        </div>
-                      </div>
-
-                      {selectedCustomer.leads?.map((lead: any) => (
-                        <div key={lead.id} className="relative">
-                          <div className="absolute -left-[30px] top-0 w-4 h-4 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-                            <Clock className="w-2.5 h-2.5 text-indigo-400" />
-                          </div>
-                          <div className="text-xs">
-                            <span className="font-semibold text-foreground">Lead Created: {lead.title}</span>
-                            <span className="text-[9px] bg-secondary border rounded px-1.5 py-0.5 ml-2 font-mono uppercase">
-                              {lead.status}
-                            </span>
-                            <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                              Value: ₹{lead.value.toLocaleString("en-IN")}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-
-                      {selectedCustomer.quotations?.map((q: any) => (
-                        <div key={q.id} className="relative">
-                          <div className="absolute -left-[30px] top-0 w-4 h-4 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                            <FileText className="w-2.5 h-2.5 text-amber-400" />
-                          </div>
-                          <div className="text-xs">
-                            <span className="font-semibold text-foreground">Quotation Issued: {q.quoteNumber}</span>
-                            <span className="text-[9px] bg-secondary border rounded px-1.5 py-0.5 ml-2 font-mono uppercase">
-                              {q.status}
-                            </span>
-                            <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                              Total: ₹{q.totalAmount.toLocaleString("en-IN")}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-
-                      {selectedCustomer.invoices?.map((i: any) => (
-                        <div key={i.id} className="relative">
-                          <div className="absolute -left-[30px] top-0 w-4 h-4 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                            <DollarSign className="w-2.5 h-2.5 text-emerald-400" />
-                          </div>
-                          <div className="text-xs">
-                            <span className="font-semibold text-foreground">Invoice Generated: {i.invoiceNumber}</span>
-                            <span className="text-[9px] bg-secondary border rounded px-1.5 py-0.5 ml-2 font-mono uppercase">
-                              {i.status}
-                            </span>
-                            <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                              Billed: ₹{i.totalAmount.toLocaleString("en-IN")} | Collected: ₹{i.amountPaid.toLocaleString("en-IN")}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 6. QUOTATIONS TAB */}
+                {/* 3. QUOTATIONS TAB */}
                 {activeTab === "quotations" && (
                   <div className="flex flex-col gap-4">
                     <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
@@ -901,17 +581,19 @@ export default function CustomersPage() {
                               <tr key={q.id} className="hover:bg-secondary/15">
                                 <td className="p-2.5 font-bold">{q.quoteNumber}</td>
                                 <td className="p-2.5">v{q.version}</td>
-                                <td className="p-2.5 font-sans">{new Date(q.createdAt).toLocaleDateString("en-IN")}</td>
-                                <td className="p-2.5 text-right font-bold text-foreground">₹{q.totalAmount.toLocaleString("en-IN")}</td>
+                                <td className="p-2.5 text-muted-foreground">
+                                  {new Date(q.createdAt).toLocaleDateString("en-IN")}
+                                </td>
+                                <td className="p-2.5 text-right font-bold text-foreground">
+                                  ₹{q.totalAmount.toLocaleString("en-IN")}
+                                </td>
                                 <td className="p-2.5 text-center">
                                   <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${
                                     q.status === "APPROVED" 
                                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
                                       : q.status === "SENT"
                                       ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                                      : q.status === "REJECTED"
-                                      ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                                      : "bg-muted/10 text-muted-foreground border-border"
+                                      : "bg-muted/15 text-muted-foreground border-border"
                                   }`}>
                                     {q.status}
                                   </span>
@@ -925,55 +607,56 @@ export default function CustomersPage() {
                   </div>
                 )}
 
-                {/* 7. INVOICES TAB */}
+                {/* 4. INVOICES TAB */}
                 {activeTab === "invoices" && (
                   <div className="flex flex-col gap-4">
                     <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                      Billed Invoices ({selectedCustomer.invoices?.length || 0})
+                      Invoices Ledger ({selectedCustomer.invoices?.length || 0})
                     </h3>
                     <div className="border border-border/80 rounded-lg overflow-hidden">
                       <table className="w-full text-left border-collapse text-xs">
                         <thead>
                           <tr className="bg-secondary/35 text-[9px] font-mono uppercase tracking-wider text-muted-foreground border-b border-border/60">
                             <th className="p-2.5">Invoice No</th>
-                            <th className="p-2.5">Due Date</th>
-                            <th className="p-2.5 text-right">Invoice Value</th>
+                            <th className="p-2.5">Issued Date</th>
                             <th className="p-2.5 text-right">Amount Paid</th>
-                            <th className="p-2.5 text-right">Outstanding</th>
+                            <th className="p-2.5 text-right">Total Amount</th>
                             <th className="p-2.5 text-center">Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/60 font-mono">
                           {!selectedCustomer.invoices || selectedCustomer.invoices.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="text-center p-4 text-muted-foreground font-sans">
+                              <td colSpan={5} className="text-center p-4 text-muted-foreground font-sans">
                                 No invoices issued.
                               </td>
                             </tr>
                           ) : (
-                            selectedCustomer.invoices.map((inv: any) => {
-                              const bal = inv.totalAmount - inv.amountPaid;
-                              return (
-                                <tr key={inv.id} className="hover:bg-secondary/15">
-                                  <td className="p-2.5 font-bold">{inv.invoiceNumber}</td>
-                                  <td className="p-2.5 font-sans">{new Date(inv.paymentDue || Date.now()).toLocaleDateString("en-IN")}</td>
-                                  <td className="p-2.5 text-right">₹{inv.totalAmount.toLocaleString("en-IN")}</td>
-                                  <td className="p-2.5 text-right text-emerald-400">₹{inv.amountPaid.toLocaleString("en-IN")}</td>
-                                  <td className="p-2.5 text-right font-bold text-rose-400">₹{bal.toLocaleString("en-IN")}</td>
-                                  <td className="p-2.5 text-center">
-                                    <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${
-                                      inv.status === "PAID" 
-                                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
-                                        : inv.status === "PARTIAL"
-                                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                                        : "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                                    }`}>
-                                      {inv.status}
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })
+                            selectedCustomer.invoices.map((inv: any) => (
+                              <tr key={inv.id} className="hover:bg-secondary/15">
+                                <td className="p-2.5 font-bold">{inv.invoiceNumber}</td>
+                                <td className="p-2.5 text-muted-foreground">
+                                  {new Date(inv.createdAt).toLocaleDateString("en-IN")}
+                                </td>
+                                <td className="p-2.5 text-right text-emerald-400 font-bold">
+                                  ₹{inv.amountPaid.toLocaleString("en-IN")}
+                                </td>
+                                <td className="p-2.5 text-right font-bold text-foreground">
+                                  ₹{inv.totalAmount.toLocaleString("en-IN")}
+                                </td>
+                                <td className="p-2.5 text-center">
+                                  <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${
+                                    inv.status === "PAID" 
+                                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                                      : inv.status === "PARTIAL"
+                                      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                      : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                  }`}>
+                                    {inv.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
                           )}
                         </tbody>
                       </table>
@@ -981,22 +664,20 @@ export default function CustomersPage() {
                   </div>
                 )}
 
-                {/* 8. PAYMENTS TAB */}
+                {/* 5. PAYMENTS TAB */}
                 {activeTab === "payments" && (
                   <div className="flex flex-col gap-4">
                     <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                      Remittance Transactions
+                      Collected Payments Receipts
                     </h3>
                     <div className="border border-border/80 rounded-lg overflow-hidden">
                       <table className="w-full text-left border-collapse text-xs">
                         <thead>
                           <tr className="bg-secondary/35 text-[9px] font-mono uppercase tracking-wider text-muted-foreground border-b border-border/60">
-                            <th className="p-2.5">Receipt ID</th>
                             <th className="p-2.5">Invoice No</th>
-                            <th className="p-2.5">Method</th>
-                            <th className="p-2.5">Reference UTR</th>
-                            <th className="p-2.5 text-right">Amount</th>
-                            <th className="p-2.5 font-sans">Date</th>
+                            <th className="p-2.5">Payment Method</th>
+                            <th className="p-2.5">Type</th>
+                            <th className="p-2.5 text-right">Amount Received</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/60 font-mono">
@@ -1004,16 +685,15 @@ export default function CustomersPage() {
                             const payments: any[] = [];
                             selectedCustomer.invoices?.forEach((inv: any) => {
                               inv.payments?.forEach((p: any) => {
-                                payments.push({ ...p, invoiceNo: inv.invoiceNumber });
+                                payments.push({ ...p, invoiceNumber: inv.invoiceNumber });
                               });
                             });
-                            payments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
                             if (payments.length === 0) {
                               return (
                                 <tr>
-                                  <td colSpan={6} className="text-center p-4 text-muted-foreground font-sans">
-                                    No payments received from this customer.
+                                  <td colSpan={4} className="text-center p-4 text-muted-foreground font-sans">
+                                    No recorded payment transactions.
                                   </td>
                                 </tr>
                               );
@@ -1021,12 +701,12 @@ export default function CustomersPage() {
 
                             return payments.map((p: any) => (
                               <tr key={p.id} className="hover:bg-secondary/15">
-                                <td className="p-2.5 text-[10px] text-muted-foreground">{p.id}</td>
-                                <td className="p-2.5 font-bold">{p.invoiceNo}</td>
-                                <td className="p-2.5">{p.paymentMethod}</td>
-                                <td className="p-2.5 text-muted-foreground">{p.transactionRef || "N/A"}</td>
-                                <td className="p-2.5 text-right font-bold text-emerald-400 font-mono">₹{p.amount.toLocaleString("en-IN")}</td>
-                                <td className="p-2.5 font-sans">{new Date(p.createdAt).toLocaleDateString("en-IN")}</td>
+                                <td className="p-2.5 font-bold">{p.invoiceNumber}</td>
+                                <td className="p-2.5 font-bold text-primary">{p.paymentMethod}</td>
+                                <td className="p-2.5 text-muted-foreground">{p.paymentType}</td>
+                                <td className="p-2.5 text-right font-bold text-emerald-400">
+                                  ₹{p.amount.toLocaleString("en-IN")}
+                                </td>
                               </tr>
                             ));
                           })()}
@@ -1035,33 +715,12 @@ export default function CustomersPage() {
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* Internal Private Notes Section */}
-              <div className="border-t border-border/60 pt-4 flex flex-col gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
-                  Internal Customer Notes
-                </span>
-                <div className="flex gap-2">
-                  <textarea
-                    rows={2}
-                    placeholder="Write private notes on customer preferences (e.g. requires Somfy remote config, prefers credit terms)..."
-                    value={customerNotes}
-                    onChange={(e) => setCustomerNotes(e.target.value)}
-                    className="flex-grow bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground resize-none"
-                  />
-                  <button
-                    onClick={handleSaveNotes}
-                    className="bg-secondary hover:bg-secondary/80 border border-border/80 text-foreground font-semibold px-3 rounded-lg text-xs transition-all shrink-0 h-auto"
-                  >
-                    Save Notes
-                  </button>
-                </div>
               </div>
             </div>
           ) : (
-            <div className="border border-border/80 border-dashed rounded-xl p-12 text-center text-xs text-muted-foreground bg-card/20">
-              Select or register a customer profile to display site location ledger.
+            <div className="border border-border/80 rounded-xl bg-card/45 p-12 text-center text-xs text-muted-foreground">
+              Select a customer profile from the left registry to view full records.
             </div>
           )}
         </div>
@@ -1070,125 +729,115 @@ export default function CustomersPage() {
       {/* Add Customer Modal */}
       {showAddCustomer && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-border flex justify-between items-center bg-secondary/10">
-              <h3 className="font-heading font-semibold text-sm">Add Customer Profile</h3>
+          <div className="w-full max-w-lg bg-card border border-border rounded-xl shadow-2xl overflow-hidden font-sans">
+            <div className="p-5 border-b border-border flex justify-between items-center bg-secondary/15">
+              <h3 className="font-heading font-semibold text-sm">Register New Customer Profile</h3>
               <button onClick={() => setShowAddCustomer(false)} className="text-muted-foreground hover:text-foreground text-xs font-semibold">
                 Cancel
               </button>
             </div>
             
-            <form onSubmit={handleAddCustomer} className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+            <form onSubmit={handleAddCustomer} className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Type</label>
-                  <select
-                    value={custType}
-                    onChange={(e) => setCustType(e.target.value as "COMPANY" | "INDIVIDUAL")}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-2 text-xs outline-none text-foreground"
-                  >
-                    <option value="COMPANY" className="bg-card text-foreground">Company</option>
-                    <option value="INDIVIDUAL" className="bg-card text-foreground">Individual</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Phone Number</label>
+                  <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Full Name *</label>
                   <input
                     type="text"
                     required
-                    placeholder="+91 98765..."
-                    value={custPhone}
-                    onChange={(e) => setCustPhone(e.target.value)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground font-mono"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">WhatsApp No.</label>
-                  <input
-                    type="text"
-                    placeholder="+91 98765..."
-                    value={custWhatsapp}
-                    onChange={(e) => setCustWhatsapp(e.target.value)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Customer Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Anil Sharma"
+                    placeholder="e.g. Anil Sharma"
                     value={custName}
                     onChange={(e) => setCustName(e.target.value)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground font-semibold"
+                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary font-semibold"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Company Name</label>
+                  <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Company Name</label>
                   <input
                     type="text"
-                    placeholder="Metro Retailers Ltd"
+                    placeholder="e.g. Metro Retailers Ltd"
                     value={custCompanyName}
                     onChange={(e) => setCustCompanyName(e.target.value)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground font-semibold"
+                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary font-semibold"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Email Address</label>
-                  <input
-                    type="email"
-                    placeholder="name@company.com"
-                    value={custEmail}
-                    onChange={(e) => setCustEmail(e.target.value)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground"
-                  />
+                  <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Customer Type</label>
+                  <select
+                    value={custType}
+                    onChange={(e) => setCustType(e.target.value as any)}
+                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
+                  >
+                    <option value="COMPANY" className="bg-card">Company</option>
+                    <option value="INDIVIDUAL" className="bg-card">Individual</option>
+                  </select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">GST Identification No. (Optional)</label>
+                <div className="space-y-1 font-mono">
+                  <label className="text-[10px] font-sans font-bold uppercase text-muted-foreground">Phone Number *</label>
                   <input
                     type="text"
-                    placeholder="27AAACM1234F1Z5"
-                    value={custGst}
-                    onChange={(e) => setCustGst(e.target.value)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground font-mono"
+                    required
+                    placeholder="+91 98765 43210"
+                    value={custPhone}
+                    onChange={(e) => setCustPhone(e.target.value)}
+                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Billing Address</label>
-                <textarea
-                  required
-                  rows={2}
-                  placeholder="Complete billing address of the customer"
-                  value={custBilling}
-                  onChange={(e) => setCustBilling(e.target.value)}
-                  className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground resize-none"
+              <div className="grid grid-cols-2 gap-3 font-mono">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-sans font-bold uppercase text-muted-foreground">WhatsApp Number</label>
+                  <input
+                    type="text"
+                    placeholder="+91 98765 43210"
+                    value={custWhatsapp}
+                    onChange={(e) => setCustWhatsapp(e.target.value)}
+                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-sans font-bold uppercase text-muted-foreground">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="client@company.com"
+                    value={custEmail}
+                    onChange={(e) => setCustEmail(e.target.value)}
+                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary font-sans"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1 font-mono">
+                <label className="text-[10px] font-sans font-bold uppercase text-muted-foreground">GSTIN Identification</label>
+                <input
+                  type="text"
+                  placeholder="27AAACK5912K1Z9"
+                  value={custGst}
+                  onChange={(e) => setCustGst(e.target.value)}
+                  className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Shipping Address (Optional)</label>
+                <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Billing Address *</label>
                 <textarea
                   rows={2}
-                  placeholder="Complete delivery address if different from billing"
-                  value={custShipping}
-                  onChange={(e) => setCustShipping(e.target.value)}
-                  className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground resize-none"
+                  required
+                  placeholder="Complete office/billing location info"
+                  value={custBilling}
+                  onChange={(e) => setCustBilling(e.target.value)}
+                  className="w-full bg-secondary/30 border border-border rounded-xl p-2.5 text-xs outline-none focus:border-primary resize-none"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-primary text-primary-foreground font-semibold py-2 rounded-md text-xs hover:bg-primary/95 shadow-md shadow-primary/25 cursor-pointer"
+                className="w-full bg-primary text-primary-foreground font-bold py-2.5 rounded-xl text-xs hover:bg-primary/95 shadow-md shadow-primary/25 cursor-pointer mt-2"
               >
-                Create Profile Entry
+                Register Customer Profile
               </button>
             </form>
           </div>
@@ -1198,71 +847,66 @@ export default function CustomersPage() {
       {/* Add Site Modal */}
       {showAddSite && selectedCustomer && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-border flex justify-between items-center bg-secondary/10">
-              <h3 className="font-heading font-semibold text-sm">Add Installation Site</h3>
+          <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden font-sans">
+            <div className="p-5 border-b border-border flex justify-between items-center bg-secondary/15">
+              <h3 className="font-heading font-semibold text-sm">Add Site Address for {selectedCustomer.name}</h3>
               <button onClick={() => setShowAddSite(false)} className="text-muted-foreground hover:text-foreground text-xs font-semibold">
                 Cancel
               </button>
             </div>
             
-            <form onSubmit={handleAddSite} className="p-6 space-y-4">
+            <form onSubmit={handleAddSite} className="p-6 space-y-4 text-xs">
               <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground font-mono">CUSTOMER PROFILE</span>
-                <p className="text-xs font-bold text-foreground">{selectedCustomer.name}</p>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">Site Address</label>
+                <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Installation Site Location Address *</label>
                 <textarea
-                  required
                   rows={3}
-                  placeholder="Provide precise location coordinates / full address"
+                  required
+                  placeholder="Plot number, industrial area, street, city..."
                   value={siteAddress}
                   onChange={(e) => setSiteAddress(e.target.value)}
-                  className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground resize-none"
+                  className="w-full bg-secondary/30 border border-border rounded-xl p-2.5 text-xs outline-none focus:border-primary resize-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Site Supervisor / Contact Name</label>
+                  <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Site Manager Name</label>
                   <input
                     type="text"
-                    placeholder="Mr. Verma"
+                    placeholder="Mr. Ramesh"
                     value={siteContactPerson}
                     onChange={(e) => setSiteContactPerson(e.target.value)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground"
+                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Site Contact Phone</label>
+                <div className="space-y-1 font-mono">
+                  <label className="text-[10px] font-sans font-bold uppercase text-muted-foreground">Manager Phone</label>
                   <input
                     type="text"
-                    placeholder="+91 99999 XXXXX"
+                    placeholder="+91 99999 88888"
                     value={siteContactPhone}
                     onChange={(e) => setSiteContactPhone(e.target.value)}
-                    className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground"
+                    className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Installation Instruction Notes</label>
-                <textarea
-                  rows={2}
-                  placeholder="Any structural constraints, wiring offsets, custom height overrides etc."
+                <label className="text-[10px] font-mono uppercase text-muted-foreground font-bold">Site Installation Notes</label>
+                <input
+                  type="text"
+                  placeholder="Clearance height, power connection, wind load notes..."
                   value={siteNotes}
                   onChange={(e) => setSiteNotes(e.target.value)}
-                  className="w-full bg-secondary/40 border border-border rounded-md px-3 py-1.5 text-xs outline-none text-foreground resize-none"
+                  className="w-full bg-secondary/30 border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-primary text-primary-foreground font-semibold py-2 rounded-md text-xs hover:bg-primary/95 shadow-md shadow-primary/25 cursor-pointer"
+                className="w-full bg-primary text-primary-foreground font-bold py-2.5 rounded-xl text-xs hover:bg-primary/95 shadow-md shadow-primary/25 cursor-pointer mt-2"
               >
-                Link Site Location
+                Save Site Address
               </button>
             </form>
           </div>

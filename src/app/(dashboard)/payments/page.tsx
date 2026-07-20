@@ -5,6 +5,7 @@ import {
   CreditCard, Search, Landmark, Banknote, HelpCircle, 
   ArrowDownRight, Check, RefreshCw
 } from "lucide-react";
+import { PageSkeleton } from "@/components/ui/loaders";
 
 interface Customer {
   name: string;
@@ -57,6 +58,8 @@ export default function PaymentsPage() {
   const upiTotal = filteredPayments.filter(p => p.paymentMethod === "UPI").reduce((sum, p) => sum + p.amount, 0);
   const cashTotal = filteredPayments.filter(p => p.paymentMethod === "CASH").reduce((sum, p) => sum + p.amount, 0);
   const bankTotal = filteredPayments.filter(p => p.paymentMethod === "BANK").reduce((sum, p) => sum + p.amount, 0);
+
+  if (loading) return <PageSkeleton rows={6} />;
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -159,30 +162,57 @@ export default function PaymentsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredPayments.map((p) => (
-                  <tr key={p.id} className="hover:bg-secondary/25 transition-colors">
-                    <td className="p-4 font-mono text-muted-foreground/60">{p.id}</td>
-                    <td className="p-4 font-bold text-foreground font-mono">
-                      {p.invoice?.invoiceNumber || "N/A"}
-                    </td>
-                    <td className="p-4 font-semibold text-foreground">
-                      {p.invoice?.customer?.name || "N/A"}
-                    </td>
-                    <td className="p-4">
-                      <span className="font-medium text-foreground">{p.paymentType}</span>
-                    </td>
-                    <td className="p-4">
-                      <span className="font-semibold text-foreground font-mono">{p.paymentMethod}</span>
-                    </td>
-                    <td className="p-4 font-mono text-muted-foreground">{p.transactionRef || "N/A"}</td>
-                    <td className="p-4 text-right font-bold text-foreground font-mono">
-                      ₹{p.amount.toLocaleString("en-IN")}
-                    </td>
-                    <td className="p-4 text-muted-foreground">
-                      {new Date(p.createdAt).toLocaleString("en-IN")}
-                    </td>
-                  </tr>
-                ))
+                filteredPayments.map((p) => {
+                  const amt = Number(p.amount || 0);
+                  const method = p.paymentMethod || "UPI";
+
+                  return (
+                    <tr key={p.id} className="hover:bg-secondary/25 transition-colors">
+                      <td className="p-4 font-mono text-muted-foreground/60">{p.id}</td>
+                      <td className="p-4 font-bold text-foreground font-mono">
+                        {p.invoice?.invoiceNumber || "N/A"}
+                      </td>
+                      <td className="p-4 font-semibold text-foreground">
+                        {p.invoice?.customer?.name || "Individual"}
+                      </td>
+                      <td className="p-4">
+                        <span className="font-bold text-foreground text-[11px] px-2 py-0.5 rounded bg-secondary/80 border border-border">
+                          {p.paymentType || "INSTALMENT"}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${
+                            method === "UPI"
+                              ? "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30"
+                              : method === "CASH"
+                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                              : method === "BANK"
+                              ? "bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-500/30"
+                              : "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30"
+                          }`}
+                        >
+                          {method}
+                        </span>
+                      </td>
+                      <td className="p-4 font-mono text-muted-foreground">
+                        {p.transactionRef ? (
+                          <span className="bg-card/80 border px-1.5 py-0.5 rounded text-foreground font-bold">
+                            {p.transactionRef}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/60 italic">None</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono text-sm">
+                        +₹{amt.toLocaleString("en-IN")}
+                      </td>
+                      <td className="p-4 text-muted-foreground font-mono text-[11px]">
+                        {p.createdAt ? new Date(p.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "N/A"}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -3,69 +3,44 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { 
-  DollarSign, KanbanSquare, Package2, ShieldCheck, 
-  ArrowUpRight, HardDrive, AlertTriangle, Play, ChevronRight, Activity, Calendar
+  DollarSign, Package2,
+  Play, ChevronRight,
+  Plus, User, Sparkles
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
-
-interface AuditLog {
-  id: string;
-  userEmail: string;
-  action: string;
-  details: string;
-  timestamp: string;
-}
 
 export default function DashboardHome() {
   const { user } = useAuth();
   
   // Dashboard Metrics
-  const [revenue, setRevenue] = useState(487220);
-  const [leadsCount, setLeadsCount] = useState(3);
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-
-  const [storageUsedBytes, setStorageUsedBytes] = useState(1.45 * 1024 * 1024 * 1024);
-  const [storageTotalBytes, setStorageTotalBytes] = useState(10 * 1024 * 1024 * 1024);
-
+  const [revenue, setRevenue] = useState(0);
   const [invoicesList, setInvoicesList] = useState<any[]>([]);
   const [quotesList, setQuotesList] = useState<any[]>([]);
 
   const fetchDashboardData = async () => {
     try {
-      const invRes = await fetch("/api/invoices");
-      const leadRes = await fetch("/api/leads");
-      const logRes = await fetch("/api/audit-log");
-      const storageRes = await fetch("/api/storage");
-      const quoteRes = await fetch("/api/quotations");
+      const [invRes, quoteRes] = await Promise.all([
+        fetch("/api/invoices"),
+        fetch("/api/quotations")
+      ]);
 
-      if (invRes.ok && leadRes.ok && logRes.ok && storageRes.ok && quoteRes.ok) {
-        const invoices = await invRes.json();
-        const leads = await leadRes.json();
-        const auditLogs = await logRes.json();
-        const storage = await storageRes.json();
-        const quotations = await quoteRes.json();
+      const [invoices, quotations] = await Promise.all([
+        invRes.ok ? invRes.json() : [],
+        quoteRes.ok ? quoteRes.json() : []
+      ]);
 
-        setInvoicesList(invoices);
-        setQuotesList(quotations);
+      setInvoicesList(invoices);
+      setQuotesList(quotations);
 
-        // Calculate metrics
-        const totalRev = invoices.reduce((sum: number, i: any) => sum + i.amountPaid, 0);
-        setRevenue(totalRev);
-        setLeadsCount(leads.length);
-        setLogs(auditLogs.slice(0, 5)); // top 5
-        setStorageUsedBytes(storage.usedBytes);
-        setStorageTotalBytes(storage.totalQuotaBytes);
-      }
+      // Calculate metrics
+      const totalRev = invoices.reduce((sum: number, i: any) => sum + i.amountPaid, 0);
+      setRevenue(totalRev);
     } catch (e) {}
   };
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  const storageUsedGB = storageUsedBytes / (1024 * 1024 * 1024);
-  const storageTotalGB = storageTotalBytes / (1024 * 1024 * 1024);
-  const storagePercent = Math.min((storageUsedBytes / storageTotalBytes) * 100, 100);
 
   // SVG Area Chart points mock based on real counts
   // Representing months: Jan, Feb, Mar, Apr, May, Jun, Jul
@@ -84,26 +59,39 @@ export default function DashboardHome() {
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      {/* Dynamic storage full alert banner */}
-      {storageUsedBytes >= storageTotalBytes && (
-        <div className="border border-destructive/25 bg-destructive/10 p-4 rounded-xl flex items-center justify-between gap-4 animate-pulse">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
-            <div className="text-xs">
-              <p className="font-bold text-foreground">Storage Quota Exceeded</p>
-              <p className="text-muted-foreground">
-                You have reached your {storageTotalGB.toFixed(0)}GB limit. File uploads are disabled.
-              </p>
-            </div>
-          </div>
+
+      {/* Quick Launch Operations Bar */}
+      <div className="bg-card/45 border border-border/80 p-4 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">Quick Launch:</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <Link
-            href="/storage"
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-semibold py-1.5 px-4 rounded-lg shadow transition-all shrink-0"
+            href="/quotations"
+            className="bg-primary text-primary-foreground font-bold px-3 py-1.5 rounded-lg hover:bg-primary/95 transition-all shadow-sm flex items-center gap-1.5"
           >
-            Upgrade Capacity
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Quotation</span>
+          </Link>
+
+          <Link
+            href="/invoices"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all shadow-sm flex items-center gap-1.5"
+          >
+            <Play className="w-3.5 h-3.5" />
+            <span>Convert Proposal to Invoice</span>
+          </Link>
+
+          <Link
+            href="/customers"
+            className="bg-secondary hover:bg-secondary/80 border border-border text-foreground font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
+          >
+            <User className="w-3.5 h-3.5 text-muted-foreground" />
+            <span>Add Customer</span>
           </Link>
         </div>
-      )}
+      </div>
 
       {/* KPI summary tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -111,35 +99,35 @@ export default function DashboardHome() {
         <div className="bg-card/45 border border-border/80 p-5 rounded-xl flex flex-col gap-2 relative group hover:border-border transition-all">
           <div className="flex justify-between items-center text-muted-foreground">
             <span className="text-[10px] font-mono uppercase tracking-wider">Booked Revenue</span>
-            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <span className="text-2xl font-bold font-heading font-mono text-foreground leading-none">
+          <span className="text-2xl font-bold font-heading font-mono text-emerald-600 dark:text-emerald-400 leading-none">
             ₹{revenue.toLocaleString("en-IN")}
           </span>
           <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
-            <span className="text-emerald-400 font-bold font-mono">+12.4%</span> vs last month
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">+12.4%</span> vs last month
           </span>
         </div>
 
-        {/* Leads */}
+        {/* Active Invoices */}
         <div className="bg-card/45 border border-border/80 p-5 rounded-xl flex flex-col gap-2 relative group hover:border-border transition-all">
           <div className="flex justify-between items-center text-muted-foreground">
-            <span className="text-[10px] font-mono uppercase tracking-wider">Active Leads Pipeline</span>
-            <KanbanSquare className="w-4 h-4 text-sky-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider">Active Invoices</span>
+            <Package2 className="w-4 h-4 text-sky-600 dark:text-sky-400" />
           </div>
-          <span className="text-2xl font-bold font-heading font-mono text-foreground leading-none">
-            {leadsCount} Leads
+          <span className="text-2xl font-bold font-heading font-mono text-sky-600 dark:text-sky-400 leading-none">
+            {invoicesList.length} Invoices
           </span>
-          <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
-            {leadsCount > 0 ? "Awaiting measurements" : "Pipeline is empty"}
+          <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1 font-mono">
+            <strong className="text-emerald-600 dark:text-emerald-400">{invoicesList.filter(i => i.status === "PAID").length} Paid</strong> | <strong className="text-rose-600 dark:text-rose-400">{invoicesList.filter(i => i.status !== "PAID").length} Pending</strong>
           </span>
         </div>
       </div>
 
       {/* Main visualization grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Revenue SVG area chart */}
-        <div className="lg:col-span-2 border border-border/80 rounded-xl bg-card/45 backdrop-blur-md p-6 flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-6">
+        {/* Full-width Revenue SVG area chart */}
+        <div className="border border-border/80 rounded-xl bg-card/45 backdrop-blur-md p-6 flex flex-col gap-4">
           <div className="flex justify-between items-center border-b border-border/40 pb-3">
             <div className="flex flex-col">
               <h3 className="font-heading font-semibold text-sm">Monthly Growth Trend</h3>
@@ -211,54 +199,6 @@ export default function DashboardHome() {
             </div>
           </div>
         </div>
-
-        {/* Right cloud storage breakdown */}
-        <div className="lg:col-span-1 border border-border/80 rounded-xl bg-card/45 backdrop-blur-md p-6 flex flex-col justify-between gap-5">
-          <div className="flex flex-col border-b border-border/40 pb-3">
-            <h3 className="font-heading font-semibold text-sm">Storage Utilization</h3>
-            <span className="text-[10px] text-muted-foreground">Attached docs and drawings</span>
-          </div>
-
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative w-24 h-24 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90">
-                <circle
-                  cx="48"
-                  cy="48"
-                  r="40"
-                  className="stroke-border fill-none"
-                  strokeWidth="8"
-                />
-                <circle
-                  cx="48"
-                  cy="48"
-                  r="40"
-                  className={`fill-none transition-all duration-500 ${
-                    storageUsedBytes >= storageTotalBytes ? "stroke-destructive" : "stroke-primary"
-                  }`}
-                  strokeWidth="8"
-                  strokeDasharray={`${2 * Math.PI * 40}`}
-                  strokeDashoffset={`${2 * Math.PI * 40 * (1 - storagePercent / 100)}`}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-base font-bold font-mono leading-none">{storagePercent.toFixed(0)}%</span>
-                <span className="text-[8px] text-muted-foreground font-mono mt-0.5">USED</span>
-              </div>
-            </div>
-            
-            <p className="text-[11px] font-mono text-muted-foreground text-center">
-              Using <span className="font-bold text-foreground">{storageUsedGB.toFixed(2)} GB</span> of {storageTotalGB.toFixed(0)} GB total quota limit.
-            </p>
-          </div>
-
-          <Link
-            href="/storage"
-            className="w-full text-center border border-border hover:bg-secondary text-xs font-semibold py-2 rounded-lg transition-all text-foreground"
-          >
-            Manage Storage & Upgrade
-          </Link>
-        </div>
       </div>
 
       {/* Pending Items Grid */}
@@ -322,62 +262,37 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* Bottom ledger layout: Recent Audit logs and Shortcuts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Audit Activity list */}
-        <div className="lg:col-span-2 border border-border/80 rounded-xl bg-card/30 p-5 flex flex-col gap-4">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2 border-b border-border pb-2">
-            <Activity className="w-4 h-4 text-primary" />
-            <span>Recent System Activity Audit Logs</span>
-          </h3>
+      {/* Workspace Actions */}
+      <div className="border border-border/80 rounded-xl bg-card/30 p-5 flex flex-col gap-4">
+        <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2 border-b border-border pb-2">
+          <Play className="w-4 h-4 text-primary" />
+          <span>Workspace Actions</span>
+        </h3>
 
-          <div className="flex flex-col divide-y divide-border/40">
-            {logs.length === 0 ? (
-              <div className="text-center py-6 text-xs text-muted-foreground">
-                No logs reported recently.
-              </div>
-            ) : (
-              logs.map((log) => (
-                <div key={log.id} className="py-2.5 flex justify-between items-center text-xs">
-                  <div className="flex flex-col pr-3">
-                    <span className="font-semibold text-foreground">{log.details}</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      By: {log.userEmail} | {log.action}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground font-mono shrink-0">
-                    {new Date(log.timestamp).toLocaleTimeString("en-IN")}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/customers"
+            className="flex items-center gap-2 p-3 border rounded-lg bg-card/45 hover:bg-secondary/40 transition-all text-xs font-medium text-foreground"
+          >
+            <span>Manage Customers &amp; Sites</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
+          
+          <Link
+            href="/quotations"
+            className="flex items-center gap-2 p-3 border rounded-lg bg-card/45 hover:bg-secondary/40 transition-all text-xs font-medium text-foreground"
+          >
+            <span>Build Quotations PDF</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
 
-        {/* Quick Sandboxed shortcuts */}
-        <div className="lg:col-span-1 border border-border/80 rounded-xl bg-card/30 p-5 flex flex-col gap-4">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2 border-b border-border pb-2">
-            <Play className="w-4 h-4 text-primary" />
-            <span>Workspace Actions</span>
-          </h3>
-
-          <div className="flex flex-col gap-2">
-            <Link
-              href="/leads"
-              className="flex justify-between items-center p-3 border rounded-lg bg-card/45 hover:bg-secondary/40 transition-all text-xs font-medium text-foreground"
-            >
-              <span>View Kanban Pipelines</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-            
-            <Link
-              href="/quotations"
-              className="flex justify-between items-center p-3 border rounded-lg bg-card/45 hover:bg-secondary/40 transition-all text-xs font-medium text-foreground"
-            >
-              <span>Build Quotations PDF</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-          </div>
+          <Link
+            href="/invoices"
+            className="flex items-center gap-2 p-3 border rounded-lg bg-card/45 hover:bg-secondary/40 transition-all text-xs font-medium text-foreground"
+          >
+            <span>View Invoices &amp; Payments</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
         </div>
       </div>
     </div>

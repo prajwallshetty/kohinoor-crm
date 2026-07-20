@@ -2,22 +2,17 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./providers/auth-provider";
 import {
   LayoutDashboard,
   Users,
-  KanbanSquare,
-  Ruler,
   FileSpreadsheet,
   Receipt,
   CreditCard,
-  HardDrive,
   Settings,
   LogOut,
-  Building,
-  Activity,
-  BarChart3,
   Database
 } from "lucide-react";
 
@@ -29,25 +24,23 @@ export function Sidebar() {
 
   const menuItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Leads Kanban", href: "/leads", icon: KanbanSquare },
     { name: "Customers & Sites", href: "/customers", icon: Users },
     { name: "Quotations", href: "/quotations", icon: FileSpreadsheet },
     { name: "Invoices", href: "/invoices", icon: Receipt },
     { name: "Payments Ledger", href: "/payments", icon: CreditCard },
     { name: "Master Data", href: "/master-data", icon: Database },
-    { name: "Storage Quota", href: "/storage", icon: HardDrive },
     { name: "Admin Branding", href: "/admin", icon: Settings }
   ];
 
   return (
-    <aside className="w-64 border-r border-border bg-card/60 backdrop-blur-md flex flex-col h-screen sticky top-0">
+    <aside className="w-64 border-r border-border bg-card/60 backdrop-blur-md flex flex-col h-screen fixed top-0 left-0 z-30 font-sans">
       {/* Brand Logo Header */}
       <div className="h-16 px-6 border-b border-border flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg shadow-md shadow-primary/20">
-          K
+        <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+          <Image src="/logo.png" alt="Kohinoor Logo" width={32} height={32} className="object-contain w-full h-full" />
         </div>
         <div className="flex flex-col">
-          <span className="font-heading font-semibold text-sm leading-tight">Kohinoor Shutters</span>
+          <span className="font-heading font-semibold text-sm leading-tight">Kohinoor Rolling Shutters</span>
           <span className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">Enterprise CRM</span>
         </div>
       </div>
@@ -78,20 +71,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Audit activity link */}
-      <div className="px-4 py-2 border-t border-border/60">
-        <Link
-          href="/audit-logs"
-          className={`flex items-center gap-3 px-3 py-2 text-xs font-medium rounded-md transition-all duration-150 ${
-            pathname === "/audit-logs"
-              ? "bg-secondary text-foreground"
-              : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-          }`}
-        >
-          <Activity className="w-4.5 h-4.5 text-muted-foreground" />
-          <span>Audit Logs</span>
-        </Link>
-      </div>
 
       {/* User Profile Footer */}
       <div className="p-4 border-t border-border flex flex-col gap-2 bg-secondary/20">

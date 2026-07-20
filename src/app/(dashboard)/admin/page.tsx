@@ -45,7 +45,7 @@ export default function AdminSettingsPage() {
       const res = await fetch("/api/admin/branding");
       if (res.ok) {
         const data: CompanyBranding = await res.json();
-        setCompanyName(data.companyName || "Kohinoor Shutters");
+        setCompanyName(data.companyName || "Kohinoor Rolling Shutters");
         setLogoUrl(data.logoUrl || "");
         setGstNumber(data.gstNumber || "");
         setBankName(data.bankName || "");
@@ -221,7 +221,7 @@ export default function AdminSettingsPage() {
             <div className="bg-white border rounded p-4 text-slate-800 flex justify-between items-center text-[10px] leading-relaxed">
               <div className="flex flex-col">
                 <span className="font-bold text-slate-900 uppercase font-sans tracking-tight">
-                  {companyName || "Kohinoor Shutters"}
+                  {companyName || "Kohinoor Rolling Shutters"}
                 </span>
                 <span className="text-slate-400 text-[8px] font-mono leading-none mt-0.5">
                   GST: {gstNumber || "AWAITING CODE"}

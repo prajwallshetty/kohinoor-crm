@@ -1,6 +1,22 @@
 import { NextResponse } from "next/server";
 import { DataService, QuoteStatus } from "@/lib/data-service";
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const quotation = await DataService.getQuotationById(id);
+    if (!quotation) {
+      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
+    }
+    return NextResponse.json(quotation);
+  } catch (e) {
+    return NextResponse.json({ error: "Failed to fetch quotation" }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
