@@ -490,6 +490,9 @@ export const DataService = {
                 color: item.color || null,
                 operationType: item.operationType || null,
                 motorType: item.motorType || null,
+                categoryId: item.categoryId || null,
+                configJson: item.configJson || (item.config ? JSON.stringify(item.config) : null),
+                unit: item.unit || null,
                 bomItems: {
                   create: (item.bomItems || []).map((bom: any) => ({
                     materialName: bom.materialName,
@@ -536,6 +539,9 @@ export const DataService = {
         color: item.color || null,
         operationType: item.operationType || null,
         motorType: item.motorType || null,
+        categoryId: item.categoryId || null,
+        configJson: item.configJson || (item.config ? JSON.stringify(item.config) : null),
+        unit: item.unit || null,
         bomItems: [] as any[]
       };
 
@@ -658,6 +664,9 @@ export const DataService = {
                 color: item.color,
                 operationType: item.operationType,
                 motorType: item.motorType,
+                categoryId: item.categoryId,
+                configJson: item.configJson,
+                unit: item.unit,
                 bomItems: {
                   create: item.bomItems.map(bom => ({
                     materialName: bom.materialName,
@@ -734,6 +743,9 @@ export const DataService = {
         color: item.color || null,
         operationType: item.operationType || null,
         motorType: item.motorType || null,
+        categoryId: item.categoryId || null,
+        configJson: item.configJson || null,
+        unit: item.unit || null,
         bomItems: [] as any[]
       };
 
@@ -848,6 +860,9 @@ export const DataService = {
                 color: item.color || null,
                 operationType: item.operationType || null,
                 motorType: item.motorType || null,
+                categoryId: item.categoryId || null,
+                configJson: item.configJson || (item.config ? JSON.stringify(item.config) : null),
+                unit: item.unit || null,
                 bomItems: {
                   create: (item.bomItems || []).map((bom: any) => ({
                     materialName: bom.materialName,
@@ -969,6 +984,9 @@ export const DataService = {
           color: item.color || null,
           operationType: item.operationType || null,
           motorType: item.motorType || null,
+          categoryId: item.categoryId || null,
+          configJson: item.configJson || (item.config ? JSON.stringify(item.config) : null),
+          unit: item.unit || null,
           bomItems: [] as any[]
         };
 
@@ -1388,15 +1406,24 @@ export const DataService = {
 const seedMasterItems = [
   // 1. Material Categories
   { category: "Material Categories", name: "GI Sheet", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Pipe", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Pipes", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Spring", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Springs", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Bracket", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Brackets", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Wheel", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Wheels", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Guide", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Guides", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Kabadi", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Top Cap", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Top Caps", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Handle", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Handles", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Lock", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Locks", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Motor", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Fittings", rate: 0.0, unit: "Pcs" },
 
   // 2. Material Types
@@ -1405,11 +1432,11 @@ const seedMasterItems = [
   { category: "Material Types", name: "PPGI", rate: 110.0, unit: "Sft" },
 
   // 3. Thickness
-  { category: "Thickness", name: "18G", rate: 0.0, unit: "Pcs" },
-  { category: "Thickness", name: "20G", rate: 0.0, unit: "Pcs" },
-  { category: "Thickness", name: "21G", rate: 0.0, unit: "Pcs" },
-  { category: "Thickness", name: "22G", rate: 0.0, unit: "Pcs" },
-  { category: "Thickness", name: "24G", rate: 0.0, unit: "Pcs" },
+  { category: "Thickness", name: "18G", rate: 18.5, unit: "Pcs" },
+  { category: "Thickness", name: "20G", rate: 16.8, unit: "Pcs" },
+  { category: "Thickness", name: "21G", rate: 15.3, unit: "Pcs" },
+  { category: "Thickness", name: "22G", rate: 14.0, unit: "Pcs" },
+  { category: "Thickness", name: "24G", rate: 12.5, unit: "Pcs" },
 
   // 4. Profiles
   { category: "Profiles", name: "Flat", rate: 0.0, unit: "Pcs" },
@@ -1418,58 +1445,159 @@ const seedMasterItems = [
   { category: "Profiles", name: "Round", rate: 0.0, unit: "Pcs" },
 
   // 5. Springs
-  { category: "Springs", name: "SPR 4G", rate: 1200.0, unit: "Pcs" },
-  { category: "Springs", name: "SPR 5G", rate: 1500.0, unit: "Pcs" },
-  { category: "Springs", name: "SPR 6G", rate: 1800.0, unit: "Pcs" },
-  { category: "Springs", name: "SPR 7G", rate: 2200.0, unit: "Pcs" },
-  { category: "Springs", name: "SPR 8G", rate: 2600.0, unit: "Pcs" },
+  { category: "Springs", name: "SPR 4G", rate: 150.0, unit: "PCS" },
+  { category: "Springs", name: "SPR 5G", rate: 186.0, unit: "PCS" },
+  { category: "Springs", name: "SPR 6G", rate: 220.0, unit: "PCS" },
+  { category: "Springs", name: "SPR 7G", rate: 260.0, unit: "PCS" },
 
   // 6. Brackets
-  { category: "Brackets", name: "13/16", rate: 350.0, unit: "Pcs" },
-  { category: "Brackets", name: "12MS", rate: 450.0, unit: "Pcs" },
-  { category: "Brackets", name: "16MS", rate: 600.0, unit: "Pcs" },
-  { category: "Brackets", name: "Heavy", rate: 800.0, unit: "Pcs" },
+  { category: "Brackets", name: "13/16", rate: 350.0, unit: "PCS" },
+  { category: "Brackets", name: "12MS", rate: 450.0, unit: "PCS" },
+  { category: "Brackets", name: "16MS", rate: 600.0, unit: "PCS" },
+  { category: "Brackets", name: "Heavy", rate: 800.0, unit: "PCS" },
 
   // 7. Wheels
-  { category: "Wheels", name: "8\"", rate: 250.0, unit: "Pcs" },
-  { category: "Wheels", name: "1¼\"", rate: 150.0, unit: "Pcs" },
-  { category: "Wheels", name: "1½\"", rate: 180.0, unit: "Pcs" },
-  { category: "Wheels", name: "2\"", rate: 220.0, unit: "Pcs" },
+  { category: "Wheels", name: "8\"", rate: 250.0, unit: "PCS" },
+  { category: "Wheels", name: "1¼\"", rate: 150.0, unit: "PCS" },
+  { category: "Wheels", name: "1½\"", rate: 180.0, unit: "PCS" },
+  { category: "Wheels", name: "2\"", rate: 220.0, unit: "PCS" },
 
   // 8. Pipes
-  { category: "Pipes", name: "1\"", rate: 120.0, unit: "Rft" },
-  { category: "Pipes", name: "1¼\"", rate: 160.0, unit: "Rft" },
-  { category: "Pipes", name: "1½\"", rate: 200.0, unit: "Rft" },
-  { category: "Pipes", name: "2\"", rate: 260.0, unit: "Rft" },
-  { category: "Pipes", name: "2½\"", rate: 320.0, unit: "Rft" },
-  { category: "Pipes", name: "3\"", rate: 400.0, unit: "Rft" },
+  { category: "Pipes", name: "1\"", rate: 52.0, unit: "FT" },
+  { category: "Pipes", name: "1¼\"", rate: 68.0, unit: "FT" },
+  { category: "Pipes", name: "1¼ Pipe", rate: 68.0, unit: "FT" },
+  { category: "Pipes", name: "1½\"", rate: 90.0, unit: "FT" },
+  { category: "Pipes", name: "2\"", rate: 120.0, unit: "FT" },
+  { category: "Pipes", name: "2½\"", rate: 160.0, unit: "FT" },
+  { category: "Pipes", name: "3\"", rate: 210.0, unit: "FT" },
 
   // 9. Guides
-  { category: "Guides", name: "GC", rate: 180.0, unit: "Rft" },
-  { category: "Guides", name: "standard", rate: 150.0, unit: "Rft" },
-  { category: "Guides", name: "heavy", rate: 220.0, unit: "Rft" },
+  { category: "Guides", name: "GC", rate: 80.0, unit: "FT" },
+  { category: "Guides", name: "standard", rate: 150.0, unit: "FT" },
+  { category: "Guides", name: "heavy", rate: 220.0, unit: "FT" },
 
   // 10. Kabadi
   { category: "Kabadi", name: "GI Flat", rate: 90.0, unit: "Kg" },
 
   // 11. Top Caps
-  { category: "Top Caps", name: "3\"", rate: 80.0, unit: "Pcs" },
-  { category: "Top Caps", name: "4\"", rate: 100.0, unit: "Pcs" },
-  { category: "Top Caps", name: "5\"", rate: 130.0, unit: "Pcs" },
-  { category: "Top Caps", name: "6\"", rate: 160.0, unit: "Pcs" },
+  { category: "Top Caps", name: "3\"", rate: 80.0, unit: "PCS" },
+  { category: "Top Caps", name: "4\"", rate: 100.0, unit: "PCS" },
+  { category: "Top Caps", name: "5\"", rate: 130.0, unit: "PCS" },
+  { category: "Top Caps", name: "6\"", rate: 160.0, unit: "PCS" },
 
   // 12. Handles
-  { category: "Handles", name: "MS", rate: 50.0, unit: "Pcs" },
-  { category: "Handles", name: "SS", rate: 120.0, unit: "Pcs" },
-  { category: "Handles", name: "Heavy", rate: 180.0, unit: "Pcs" },
+  { category: "Handles", name: "MS", rate: 50.0, unit: "PCS" },
+  { category: "Handles", name: "SS", rate: 120.0, unit: "PCS" },
+  { category: "Handles", name: "Heavy", rate: 180.0, unit: "PCS" },
 
   // 13. Locks
-  { category: "Locks", name: "Standard", rate: 250.0, unit: "Pcs" },
-  { category: "Locks", name: "Heavy", rate: 450.0, unit: "Pcs" },
-  { category: "Locks", name: "SS", rate: 600.0, unit: "Pcs" },
+  { category: "Locks", name: "Standard", rate: 250.0, unit: "PCS" },
+  { category: "Locks", name: "Heavy Lock", rate: 450.0, unit: "PCS" },
+  { category: "Locks", name: "SS Lock", rate: 600.0, unit: "PCS" },
+  { category: "Locks", name: "SS", rate: 600.0, unit: "PCS" },
 
   // 14. Fittings
-  { category: "Fittings", name: "Basic", rate: 1000.0, unit: "Pcs" },
-  { category: "Fittings", name: "Premium", rate: 2500.0, unit: "Pcs" },
-  { category: "Fittings", name: "Heavy", rate: 4000.0, unit: "Pcs" }
+  { category: "Fittings", name: "Basic", rate: 1000.0, unit: "PCS" },
+  { category: "Fittings", name: "Premium", rate: 2500.0, unit: "PCS" },
+  { category: "Fittings", name: "Heavy", rate: 4000.0, unit: "PCS" },
+
+  // 15. Motor Options
+  { category: "Motor Brands", name: "Somfy", rate: 12000.0, unit: "PCS" },
+  { category: "Motor Brands", name: "Generic 40Nm", rate: 6500.0, unit: "PCS" },
+  { category: "Motor Brands", name: "Crompton", rate: 9500.0, unit: "PCS" },
+  { category: "Motor Models", name: "Roll Up 40Nm", rate: 0.0, unit: "PCS" },
+  { category: "Motor Models", name: "Roll Up 50Nm", rate: 0.0, unit: "PCS" },
+  { category: "Motor Models", name: "Heavy Duty 100Nm", rate: 0.0, unit: "PCS" },
+
+  // 16. Color Finish Options
+  { category: "Color", name: "Raw Galvanized", rate: 0.0, unit: "PCS" },
+  { category: "Color", name: "Off-White Powder Coat", rate: 15.0, unit: "Sft" },
+  { category: "Color", name: "Dark Blue Powder Coat", rate: 18.0, unit: "Sft" },
+  { category: "Color", name: "Custom RAL Powder Coat", rate: 25.0, unit: "Sft" },
+
+  // 16. Dynamic Category Fields Definitions (Loaded directly by Quotation Engine)
+  { category: "Fields: GI Sheet", name: "Material|dropdown|Material Types", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: GI Sheet", name: "Thickness|dropdown|Thickness", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: GI Sheet", name: "Profile|dropdown|Profiles", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: GI Sheet", name: "Length|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: GI Sheet", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Pipe", name: "Pipe Size|search_select|Pipes", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Pipe", name: "Length|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Pipe", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Pipes", name: "Pipe Size|search_select|Pipes", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Pipes", name: "Length|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Pipes", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Spring", name: "Spring Type|radio|Springs", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Spring", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Spring", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Springs", name: "Spring Type|radio|Springs", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Springs", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Springs", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Guide", name: "Guide Type|dropdown|Guides", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Guide", name: "Length|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Guide", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Guides", name: "Guide Type|dropdown|Guides", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Guides", name: "Length|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Guides", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Wheel", name: "Wheel Size|dropdown|Wheels", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Wheel", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Wheel", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Wheels", name: "Wheel Size|dropdown|Wheels", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Wheels", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Wheels", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Motor", name: "Brand|dropdown|Motor Brands", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Motor", name: "Model|autocomplete|Motor Models", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Motor", name: "HP|text", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Motor", name: "Price|currency", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Motor", name: "Warranty|text", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Bracket", name: "Bracket Type|dropdown|Brackets", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Bracket", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Bracket", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Brackets", name: "Bracket Type|dropdown|Brackets", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Brackets", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Brackets", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Kabadi", name: "Kabadi Type|dropdown|Kabadi", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Kabadi", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Kabadi", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Top Cap", name: "Top Cap Size|dropdown|Top Caps", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Top Cap", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Top Cap", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Top Caps", name: "Top Cap Size|dropdown|Top Caps", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Top Caps", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Top Caps", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Handle", name: "Handle Type|dropdown|Handles", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Handle", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Handle", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Handles", name: "Handle Type|dropdown|Handles", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Handles", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Handles", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Lock", name: "Lock Type|dropdown|Locks", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Lock", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Lock", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Locks", name: "Lock Type|dropdown|Locks", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Locks", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Locks", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  { category: "Fields: Fittings", name: "Fittings Type|dropdown|Fittings", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Fittings", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
+  { category: "Fields: Fittings", name: "Rate|currency", rate: 0.0, unit: "Pcs" }
 ];
+

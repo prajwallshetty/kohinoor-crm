@@ -177,6 +177,11 @@ model QuotationItem {
   motorType        String?
 
   bomItems         BOMItem[]
+
+  // Dynamic fields
+  categoryId       String?
+  configJson       String?
+  unit             String?
 }
 
 model BOMItem {

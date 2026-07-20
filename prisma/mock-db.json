@@ -8,13 +8,132 @@
       "avatarUrl": ""
     }
   ],
-  "customers": [],
-  "sites": [],
-  "leads": [],
-  "measurements": [],
-  "quotations": [],
-  "quotationItems": [],
-  "invoices": [],
+  "customers": [
+    {
+      "id": "c-1",
+      "name": "Amit Sharma",
+      "companyName": "Sharma Traders",
+      "email": "amit@sharmatraders.com",
+      "phone": "+91-9876543210",
+      "address": "Plot 14, Sector 7",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400001",
+      "createdAt": "2026-07-20T08:00:00.000Z",
+      "updatedAt": "2026-07-20T08:00:00.000Z"
+    },
+    {
+      "id": "c-2",
+      "name": "Priya Nair",
+      "companyName": "Nair Industries",
+      "email": "priya@nairindustries.com",
+      "phone": "+91-9123456780",
+      "address": "No. 22, 2nd Cross",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560001",
+      "createdAt": "2026-07-20T08:05:00.000Z",
+      "updatedAt": "2026-07-20T08:05:00.000Z"
+    }
+  ],
+  "sites": [
+    {
+      "id": "s-1",
+      "customerId": "c-1",
+      "name": "Sharma Traders - Mumbai",
+      "address": "Near Vile Parle Station",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400056",
+      "status": "ACTIVE",
+      "createdAt": "2026-07-20T08:10:00.000Z",
+      "updatedAt": "2026-07-20T08:10:00.000Z"
+    },
+    {
+      "id": "s-2",
+      "customerId": "c-2",
+      "name": "Nair Industries - Bengaluru",
+      "address": "Whitefield Main Road",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560066",
+      "status": "ACTIVE",
+      "createdAt": "2026-07-20T08:12:00.000Z",
+      "updatedAt": "2026-07-20T08:12:00.000Z"
+    }
+  ],
+  "leads": [
+    {
+      "id": "l-1",
+      "customerName": "Rohan Deshpande",
+      "phone": "+91-9988776655",
+      "email": "rohan@example.com",
+      "source": "Website",
+      "status": "NEW",
+      "expectedValue": 180000,
+      "createdAt": "2026-07-20T08:15:00.000Z"
+    }
+  ],
+  "measurements": [
+    {
+      "id": "m-1",
+      "siteId": "s-1",
+      "customerId": "c-1",
+      "width": 10,
+      "height": 8,
+      "shutterType": "ROLLING",
+      "openingType": "WINDOW",
+      "createdAt": "2026-07-20T08:20:00.000Z"
+    }
+  ],
+  "quotations": [
+    {
+      "id": "q-1",
+      "customerId": "c-1",
+      "siteId": "s-1",
+      "quoteNumber": "QT-1001",
+      "totalAmount": 182500,
+      "status": "SENT",
+      "validUntil": "2026-08-19T00:00:00.000Z",
+      "createdAt": "2026-07-20T08:30:00.000Z",
+      "updatedAt": "2026-07-20T08:30:00.000Z"
+    }
+  ],
+  "quotationItems": [
+    {
+      "id": "qi-1",
+      "quotationId": "q-1",
+      "description": "Rolling shutter GI 18G",
+      "quantity": 1,
+      "unit": "Nos",
+      "rate": 165000,
+      "amount": 165000,
+      "createdAt": "2026-07-20T08:30:00.000Z"
+    },
+    {
+      "id": "qi-2",
+      "quotationId": "q-1",
+      "description": "Motor and accessories",
+      "quantity": 1,
+      "unit": "Nos",
+      "rate": 17500,
+      "amount": 17500,
+      "createdAt": "2026-07-20T08:30:00.000Z"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "inv-1",
+      "quotationId": "q-1",
+      "customerId": "c-1",
+      "invoiceNumber": "INV-1001",
+      "totalAmount": 182500,
+      "balanceAmount": 182500,
+      "status": "UNPAID",
+      "dueDate": "2026-08-20T00:00:00.000Z",
+      "createdAt": "2026-07-20T08:35:00.000Z"
+    }
+  ],
   "payments": [
     {
       "id": "p-1784535825523",
@@ -27,10 +146,52 @@
       "updatedAt": "2026-07-20T08:23:45.523Z"
     }
   ],
-  "installationJobs": [],
-  "inventoryItems": [],
-  "warranties": [],
-  "auditLogs": [],
+  "installationJobs": [
+    {
+      "id": "ij-1",
+      "siteId": "s-1",
+      "customerId": "c-1",
+      "scheduledAt": "2026-07-25T10:00:00.000Z",
+      "status": "SCHEDULED",
+      "assignedTo": "Rajesh",
+      "createdAt": "2026-07-20T08:40:00.000Z"
+    }
+  ],
+  "inventoryItems": [
+    {
+      "id": "ii-1",
+      "name": "GI Sheet 18G",
+      "category": "Material",
+      "quantity": 100,
+      "unit": "Sft",
+      "location": "Warehouse A",
+      "createdAt": "2026-07-20T08:45:00.000Z"
+    }
+  ],
+  "warranties": [
+    {
+      "id": "w-1",
+      "invoiceId": "inv-1",
+      "customerId": "c-1",
+      "productName": "Rolling Shutter",
+      "warrantyPeriodMonths": 12,
+      "startDate": "2026-07-20",
+      "endDate": "2027-07-20",
+      "status": "ACTIVE",
+      "createdAt": "2026-07-20T08:50:00.000Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "al-1",
+      "action": "CREATE_QUOTATION",
+      "actor": "owner@kohinoor.com",
+      "entityType": "quotation",
+      "entityId": "q-1",
+      "details": "Created quotation for Sharma Traders",
+      "createdAt": "2026-07-20T08:30:00.000Z"
+    }
+  ],
   "companyBranding": {
     "id": "cb-1",
     "companyName": "Kohinoor Rolling Shutters",
@@ -166,7 +327,7 @@
       "unit": "Sft",
       "isDisabled": false,
       "createdAt": "2026-07-20T07:57:46.301Z",
-      "updatedAt": "2026-07-20T07:57:46.301Z"
+      "updatedAt": "2026-07-20T13:05:55.435Z"
     },
     {
       "id": "mi-12",
