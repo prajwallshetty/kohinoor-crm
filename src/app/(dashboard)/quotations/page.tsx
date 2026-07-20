@@ -253,8 +253,20 @@ export default function QuotationsPage() {
         item.shutterName = value;
       } else if (field === "width") {
         item.width = parseFloat(value) || 0;
+        if (item.ratePerSft && item.ratePerSft > 0) {
+          item.unitPrice = Math.round(item.width * (parseFloat(item.height) || 0) * item.ratePerSft);
+        }
       } else if (field === "height") {
         item.height = parseFloat(value) || 0;
+        if (item.ratePerSft && item.ratePerSft > 0) {
+          item.unitPrice = Math.round((parseFloat(item.width) || 0) * item.height * item.ratePerSft);
+        }
+      } else if (field === "ratePerSft") {
+        item.ratePerSft = parseFloat(value) || 0;
+        const area = (parseFloat(item.width) || 0) * (parseFloat(item.height) || 0);
+        if (item.ratePerSft > 0 && area > 0) {
+          item.unitPrice = Math.round(area * item.ratePerSft);
+        }
       } else if (field === "material") {
         item.material = value;
       } else if (field === "thickness") {
@@ -277,6 +289,26 @@ export default function QuotationsPage() {
         item.quantity = Math.max(1, Math.floor(parseFloat(value) || 1));
       } else if (field === "unitPrice") {
         item.unitPrice = Math.max(0, parseFloat(value) || 0);
+        const area = (parseFloat(item.width) || 0) * (parseFloat(item.height) || 0);
+        if (area > 0 && item.unitPrice > 0) {
+          item.ratePerSft = Math.round(item.unitPrice / area);
+        }
+      } else if (field === "selectMasterItem") {
+        const mi = masterItems.find(m => m.id === value);
+        if (mi) {
+          item.shutterName = mi.name;
+          if (mi.rate > 0) {
+            if (mi.unit?.toLowerCase().includes("sft") || mi.unit?.toLowerCase().includes("sq")) {
+              item.ratePerSft = mi.rate;
+              const area = (parseFloat(item.width) || 0) * (parseFloat(item.height) || 0);
+              if (area > 0) {
+                item.unitPrice = Math.round(area * mi.rate);
+              }
+            } else {
+              item.unitPrice = mi.rate;
+            }
+          }
+        }
       }
 
       item.lineTotal = item.quantity * item.unitPrice;
@@ -1228,29 +1260,52 @@ export default function QuotationsPage() {
                       const height = parseFloat(item.height) || 0;
                       const areaSft = width * height;
                       const qty = parseInt(item.quantity) || 1;
-                      const pricePerSft = areaSft > 0 ? Math.round(item.unitPrice / areaSft) : 0;
+                      const currentRatePerSft = item.ratePerSft || (areaSft > 0 ? Math.round(item.unitPrice / areaSft) : 0);
 
                       return (
-                        <div key={idx} className="bg-card border border-border rounded-2xl shadow-sm hover:border-primary/50 transition-all p-5 space-y-4">
+                        <div key={idx} className="bg-card border border-border/90 rounded-2xl shadow-sm hover:border-primary/50 transition-all p-5 space-y-5">
                           
-                          {/* Card Header */}
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
-                            <div className="flex items-center gap-3">
-                              <span className="bg-primary/10 text-primary font-mono font-bold text-xs px-2.5 py-1 rounded-lg">
-                                #{idx + 1}
+                          {/* Card Header & Master Catalog Auto-Fill Selector */}
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-border/50 pb-3.5">
+                            <div className="flex flex-wrap items-center gap-3 flex-1">
+                              <span className="bg-primary/10 text-primary font-mono font-bold text-xs px-2.5 py-1 rounded-lg shrink-0">
+                                Shutter #{idx + 1}
                               </span>
+                              
                               <input
                                 type="text"
-                                placeholder="Shutter identifier name..."
+                                placeholder="Shutter identifier name (e.g. Main Gate Shutter)..."
                                 value={item.shutterName || ""}
                                 onChange={(e) => updateItemRow(idx, "shutterName", e.target.value)}
-                                className="bg-secondary/30 border border-border/80 hover:border-primary/40 focus:border-primary rounded-lg px-3 py-1 text-xs outline-none text-foreground font-bold min-w-[200px]"
+                                className="bg-secondary/30 border border-border/80 hover:border-primary/40 focus:border-primary rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-bold min-w-[220px] flex-1"
                               />
+
+                              {/* Master Catalog Quick Import Dropdown */}
+                              {masterItems.length > 0 && (
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      updateItemRow(idx, "selectMasterItem", e.target.value);
+                                      e.target.value = "";
+                                    }
+                                  }}
+                                  className="bg-secondary/40 border border-border/80 hover:border-primary/40 text-foreground text-xs font-semibold px-3 py-1.5 rounded-lg outline-none cursor-pointer max-w-[220px]"
+                                >
+                                  <option value="">✨ Auto-fill from Catalog...</option>
+                                  {masterItems
+                                    .filter(mi => !mi.isDisabled)
+                                    .map((mi) => (
+                                      <option key={mi.id} value={mi.id}>
+                                        {mi.name} {mi.rate > 0 ? `(₹${mi.rate}${mi.unit ? "/" + mi.unit : ""})` : ""}
+                                      </option>
+                                    ))}
+                                </select>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-3 shrink-0">
                               {/* Live Computed Area Badge */}
-                              <span className="bg-secondary text-foreground text-xs font-mono font-bold px-3 py-1 rounded-lg border border-border/80 flex items-center gap-1.5">
+                              <span className="bg-secondary/80 text-foreground text-xs font-mono font-bold px-3 py-1.5 rounded-lg border border-border/80 flex items-center gap-1.5">
                                 <Maximize2 className="w-3.5 h-3.5 text-primary" />
                                 {width}Ft × {height}Ft = <span className="text-primary font-black">{areaSft} Sft</span>
                               </span>
@@ -1275,10 +1330,10 @@ export default function QuotationsPage() {
                             </div>
                           </div>
 
-                          {/* Form Grid Section 1: Dimensions & Quantity */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-secondary/10 p-3.5 rounded-xl border border-border/40">
+                          {/* Section 1: Dimensions & Quantity */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-secondary/15 p-4 rounded-xl border border-border/40">
                             <div className="space-y-1 font-mono">
-                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Width (Feet)</label>
+                              <label className="text-[10px] font-sans font-bold text-muted-foreground uppercase tracking-wider">Width (Feet)</label>
                               <input
                                 type="number"
                                 step="any"
@@ -1291,7 +1346,7 @@ export default function QuotationsPage() {
                             </div>
 
                             <div className="space-y-1 font-mono">
-                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Height (Feet)</label>
+                              <label className="text-[10px] font-sans font-bold text-muted-foreground uppercase tracking-wider">Height (Feet)</label>
                               <input
                                 type="number"
                                 step="any"
@@ -1304,7 +1359,7 @@ export default function QuotationsPage() {
                             </div>
 
                             <div className="space-y-1 font-mono">
-                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Quantity (Nos)</label>
+                              <label className="text-[10px] font-sans font-bold text-muted-foreground uppercase tracking-wider">Quantity (Nos)</label>
                               <input
                                 type="number"
                                 required
@@ -1316,7 +1371,7 @@ export default function QuotationsPage() {
                             </div>
 
                             <div className="space-y-1">
-                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Color Finish</label>
+                              <label className="text-[10px] font-sans font-bold text-muted-foreground uppercase tracking-wider">Color Finish</label>
                               <input
                                 type="text"
                                 placeholder="e.g. Slate Grey"
@@ -1327,40 +1382,60 @@ export default function QuotationsPage() {
                             </div>
                           </div>
 
-                          {/* Form Grid Section 2: Material & Specs */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Material</label>
-                              <select
-                                value={item.material || "GI"}
-                                onChange={(e) => updateItemRow(idx, "material", e.target.value)}
-                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary"
-                              >
-                                <option value="GI" className="bg-card">GI (Galvanized Iron)</option>
-                                <option value="ZN" className="bg-card">ZN (Zinc Coated)</option>
-                                <option value="PPGI" className="bg-card">PPGI (Pre-Painted GI)</option>
-                              </select>
+                          {/* Section 2: Interactive Pill Selectors (Material, Gauge, Profile) */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Material Selector Pills */}
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Material Type</label>
+                              <div className="flex bg-secondary/30 p-1 rounded-xl border border-border/60 gap-1 text-xs">
+                                {[
+                                  { label: "GI (Galvanized)", val: "GI" },
+                                  { label: "ZN (Zinc)", val: "ZN" },
+                                  { label: "PPGI (Pre-Painted)", val: "PPGI" }
+                                ].map((mat) => (
+                                  <button
+                                    key={mat.val}
+                                    type="button"
+                                    onClick={() => updateItemRow(idx, "material", mat.val)}
+                                    className={`flex-1 py-1.5 px-2 rounded-lg font-semibold text-[11px] transition-all text-center ${
+                                      (item.material || "GI") === mat.val
+                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                                    }`}
+                                  >
+                                    {mat.val}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
 
-                            <div className="space-y-1 font-mono">
-                              <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Gauge / Thickness</label>
+                            {/* Gauge / Thickness Select */}
+                            <div className="space-y-1.5 font-mono">
+                              <label className="text-[10px] font-sans font-bold text-muted-foreground uppercase tracking-wider">Gauge / Thickness</label>
                               <select
                                 value={item.thickness || "21G"}
                                 onChange={(e) => updateItemRow(idx, "thickness", e.target.value)}
-                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary font-mono"
+                                className="w-full bg-secondary/30 border border-border/80 rounded-xl px-3 py-2 text-xs outline-none text-foreground font-semibold focus:border-primary font-mono cursor-pointer"
                               >
-                                {thicknessList.map((mi) => (
-                                  <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
-                                ))}
+                                {thicknessList.length > 0 ? (
+                                  thicknessList.map((mi) => (
+                                    <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
+                                  ))
+                                ) : (
+                                  ["18G", "20G", "21G", "22G", "24G"].map((g) => (
+                                    <option key={g} value={g} className="bg-card">{g} Gauge</option>
+                                  ))
+                                )}
                               </select>
                             </div>
 
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Profile Shape</label>
+                            {/* Profile Shape Select */}
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Profile Shape</label>
                               <select
                                 value={item.profile || "Flat"}
                                 onChange={(e) => updateItemRow(idx, "profile", e.target.value)}
-                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary"
+                                className="w-full bg-secondary/30 border border-border/80 rounded-xl px-3 py-2 text-xs outline-none text-foreground font-semibold focus:border-primary cursor-pointer"
                               >
                                 <option value="Flat" className="bg-card">Flat Slat</option>
                                 <option value="Semi" className="bg-card">Semi Curved</option>
@@ -1368,62 +1443,126 @@ export default function QuotationsPage() {
                                 <option value="Round" className="bg-card">Round Slat</option>
                               </select>
                             </div>
+                          </div>
 
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Operation Type</label>
-                              <select
-                                value={item.operationType || "Manual"}
-                                onChange={(e) => updateItemRow(idx, "operationType", e.target.value)}
-                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary"
-                              >
-                                <option value="Manual" className="bg-card">Manual Drive</option>
-                                <option value="Motorized" className="bg-card text-emerald-400">Motorized Drive</option>
-                              </select>
+                          {/* Section 3: Operation Type & Motor Model Selector */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-border/40 pt-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Operation Drive Mode</label>
+                              <div className="flex bg-secondary/30 p-1 rounded-xl border border-border/60 gap-1 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => updateItemRow(idx, "operationType", "Manual")}
+                                  className={`flex-1 py-1.5 px-3 rounded-lg font-semibold text-xs transition-all text-center ${
+                                    (item.operationType || "Manual") === "Manual"
+                                      ? "bg-secondary text-foreground shadow-sm border border-border font-bold"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  🛠️ Manual
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => updateItemRow(idx, "operationType", "Motorized")}
+                                  className={`flex-1 py-1.5 px-3 rounded-lg font-semibold text-xs transition-all text-center ${
+                                    item.operationType === "Motorized"
+                                      ? "bg-emerald-600 text-white shadow-sm font-bold"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  ⚡ Motorized
+                                </button>
+                              </div>
                             </div>
 
-                            <div className="space-y-1 md:col-span-2">
-                              <label className="text-[10px] font-semibold text-muted-foreground uppercase">
-                                Motor Drive Model {item.operationType === "Manual" && "(Requires Motorized)"}
+                            <div className="space-y-1.5 md:col-span-2">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                Motor Model {item.operationType !== "Motorized" && "(Enable Motorized Above)"}
                               </label>
                               <select
                                 disabled={item.operationType !== "Motorized"}
                                 value={item.motorType || ""}
                                 onChange={(e) => updateItemRow(idx, "motorType", e.target.value)}
-                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs outline-none text-foreground font-semibold focus:border-primary disabled:opacity-30"
+                                className="w-full bg-secondary/30 border border-border/80 rounded-xl px-3 py-2 text-xs outline-none text-foreground font-semibold focus:border-primary disabled:opacity-30 cursor-pointer"
                               >
-                                <option value="">Select Motorized Model...</option>
+                                <option value="">Select Motor Model...</option>
                                 {masterItems
                                   .filter(mi => mi.category === "Motors" && !mi.isDisabled)
                                   .map((mi) => (
-                                    <option key={mi.id} value={mi.name} className="bg-card">{mi.name}</option>
+                                    <option key={mi.id} value={mi.name} className="bg-card">{mi.name} (₹{mi.rate.toLocaleString("en-IN")})</option>
                                   ))}
                               </select>
                             </div>
-
-                            {/* Section 3: Rate & Line Total */}
-                            <div className="space-y-1 font-mono md:col-span-2">
-                              <div className="flex justify-between items-center">
-                                <label className="text-[10px] font-sans font-semibold text-muted-foreground uppercase">Unit Selling Rate (₹)</label>
-                                {pricePerSft > 0 && (
-                                  <span className="text-[10px] font-sans text-muted-foreground">≈ ₹{pricePerSft} / Sft</span>
-                                )}
-                              </div>
-                              <input
-                                type="number"
-                                required
-                                value={item.unitPrice || "0"}
-                                onChange={(e) => updateItemRow(idx, "unitPrice", e.target.value)}
-                                className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-1.5 text-xs text-right text-emerald-400 font-bold outline-none focus:border-primary"
-                              />
-                            </div>
                           </div>
 
-                          {/* Footer Line Total */}
-                          <div className="flex justify-end items-center gap-3 pt-3 border-t border-border/40 font-mono">
-                            <span className="text-xs text-muted-foreground">Line Total:</span>
-                            <span className="text-base font-black text-foreground">
-                              ₹{(item.lineTotal || 0).toLocaleString("en-IN")}
-                            </span>
+                          {/* Section 4: Sq Ft Rate Calculator & Selling Price */}
+                          <div className="bg-secondary/15 p-4 rounded-xl border border-border/50 space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/40 pb-2">
+                              <span className="text-[10px] font-mono font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                <Calculator className="w-3.5 h-3.5 text-primary" />
+                                Rate & Price Calculator
+                              </span>
+                              
+                              {/* Quick Rate/Sft Presets */}
+                              <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                                <span className="text-muted-foreground font-mono">Quick Rates:</span>
+                                {[180, 220, 250, 300, 350].map((rate) => (
+                                  <button
+                                    key={rate}
+                                    type="button"
+                                    onClick={() => updateItemRow(idx, "ratePerSft", rate)}
+                                    className={`px-2 py-0.5 rounded font-mono font-bold transition-all border ${
+                                      currentRatePerSft === rate
+                                        ? "bg-primary text-primary-foreground border-primary"
+                                        : "bg-background hover:bg-secondary text-foreground border-border"
+                                    }`}
+                                  >
+                                    ₹{rate}/Sft
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center font-mono">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-sans font-bold text-muted-foreground uppercase">Rate per Sq. Ft. (₹/Sft)</label>
+                                <input
+                                  type="number"
+                                  placeholder="e.g. 225"
+                                  value={currentRatePerSft || ""}
+                                  onChange={(e) => updateItemRow(idx, "ratePerSft", e.target.value)}
+                                  className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground font-bold outline-none focus:border-primary text-right"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px] font-sans font-bold text-muted-foreground uppercase">
+                                  <span>Unit Selling Price (₹)</span>
+                                  {areaSft > 0 && currentRatePerSft > 0 && (
+                                    <span className="text-emerald-400 font-mono text-[9px]">
+                                      {areaSft}Sft × ₹{currentRatePerSft}
+                                    </span>
+                                  )}
+                                </div>
+                                <input
+                                  type="number"
+                                  required
+                                  value={item.unitPrice || "0"}
+                                  onChange={(e) => updateItemRow(idx, "unitPrice", e.target.value)}
+                                  className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-right text-emerald-400 font-bold outline-none focus:border-primary text-sm"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Line Total Summary */}
+                            <div className="flex justify-between items-center pt-2 font-mono text-xs border-t border-border/30">
+                              <span className="text-muted-foreground font-sans text-[11px]">
+                                Total for {qty} {qty === 1 ? "unit" : "units"} ({areaSft * qty} Sft total):
+                              </span>
+                              <span className="text-base font-black text-foreground">
+                                ₹{(item.lineTotal || 0).toLocaleString("en-IN")}
+                              </span>
+                            </div>
                           </div>
 
                         </div>
