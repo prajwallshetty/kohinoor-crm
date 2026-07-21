@@ -594,12 +594,13 @@ export default function InvoicesPage() {
   const subtotal = activeInvoiceMaterialItems.reduce((sum, item) => sum + item.amount, 0);
   const discount = selectedInvoice?.discount || 0;
   const gstRate = selectedInvoice?.gstRate || 18.0;
-  const taxableValue = Math.max(0, subtotal - discount);
   const cgstRate = gstRate / 2;
   const sgstRate = gstRate / 2;
-  const cgstAmount = Math.round(taxableValue * (cgstRate / 100));
-  const sgstAmount = Math.round(taxableValue * (sgstRate / 100));
-  const calculatedGrandTotal = taxableValue + cgstAmount + sgstAmount;
+  const taxableValue = Math.max(0, subtotal - discount);
+  const cgstAmount = gstRate > 0 ? (taxableValue * (cgstRate / 100)) : 0;
+  const sgstAmount = gstRate > 0 ? (taxableValue * (sgstRate / 100)) : 0;
+  const totalGstAmount = cgstAmount + sgstAmount;
+  const calculatedGrandTotal = taxableValue + totalGstAmount;
   const grandTotal = selectedInvoice ? selectedInvoice.totalAmount : Math.round(calculatedGrandTotal);
   const roundOff = grandTotal - calculatedGrandTotal;
   const amountInWords = numberToWordsINR(grandTotal);
@@ -914,10 +915,10 @@ export default function InvoicesPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start print:block print:w-full print:m-0 print:p-0">
             {/* TRADITIONAL GST TAX INVOICE PRINT CARD */}
-            <div className="lg:col-span-2 bg-white text-slate-900 p-8 sm:p-12 rounded-xl shadow-xl border border-slate-300 font-sans max-w-4xl mx-auto w-full print:p-0 print:border-none print:shadow-none printable-card">
+            <div className="lg:col-span-2 bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-xl border border-slate-300 font-sans max-w-4xl mx-auto w-full printable-card">
               
               {/* TOP HEADER: COMPANY DETAILS (Left) & INVOICE DETAILS (Right) */}
-              <div className="grid grid-cols-2 border-b-2 border-slate-900 pb-4 mb-4 gap-4">
+              <div className="grid grid-cols-2 border-b-2 border-slate-900 pb-3 mb-3 gap-3">
                 {/* Top Left: Company Details */}
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-3 mb-1">
@@ -953,7 +954,7 @@ export default function InvoicesPage() {
               </div>
 
               {/* CUSTOMER DETAILS: BUYER & CONSIGNEE */}
-              <div className="grid grid-cols-2 gap-4 border border-slate-300 rounded p-3 mb-4 text-[10px] leading-relaxed bg-slate-50/50">
+              <div className="grid grid-cols-2 gap-3 border border-slate-300 rounded p-2 mb-3 text-[9px] leading-snug bg-slate-50/50">
                 <div className="border-r border-slate-200 pr-3">
                   <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wider font-bold block mb-1">BUYER (BILL TO)</span>
                   <p className="font-bold text-slate-900 text-xs">{selectedInvoice.customer?.name}</p>
@@ -975,31 +976,31 @@ export default function InvoicesPage() {
               </div>
 
               {/* EXPANDED INVOICE MATERIAL TABLE (AUTOMATIC BOM EXPANSION) */}
-              <div className="border border-slate-300 rounded overflow-hidden mb-4">
-                <table className="w-full text-left text-[10px] text-slate-800 border-collapse">
+              <div className="border border-slate-300 rounded overflow-hidden mb-3">
+                <table className="w-full text-left text-[9px] text-slate-800 border-collapse">
                   <thead>
-                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 text-[9px] font-mono uppercase">
-                      <th className="p-2 text-center w-10 border-r border-slate-300">Sl No</th>
-                      <th className="p-2 border-r border-slate-300">Description of Goods</th>
-                      <th className="p-2 text-center w-20 border-r border-slate-300">HSN Code</th>
-                      <th className="p-2 text-right w-16 border-r border-slate-300">Quantity</th>
-                      <th className="p-2 text-center w-14 border-r border-slate-300">Unit</th>
-                      <th className="p-2 text-right w-20 border-r border-slate-300">Rate (₹)</th>
-                      <th className="p-2 text-right w-16 border-r border-slate-300">Disc %</th>
-                      <th className="p-2 text-right w-24 font-black">Amount (₹)</th>
+                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 text-[8px] font-mono uppercase">
+                      <th className="p-1.5 text-center w-8 border-r border-slate-300">Sl</th>
+                      <th className="p-1.5 border-r border-slate-300">Description of Goods</th>
+                      <th className="p-1.5 text-center w-16 border-r border-slate-300">HSN</th>
+                      <th className="p-1.5 text-right w-12 border-r border-slate-300">Qty</th>
+                      <th className="p-1.5 text-center w-10 border-r border-slate-300">Unit</th>
+                      <th className="p-1.5 text-right w-16 border-r border-slate-300">Rate</th>
+                      <th className="p-1.5 text-right w-12 border-r border-slate-300">Disc%</th>
+                      <th className="p-1.5 text-right w-20 font-black">Amount</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {activeInvoiceMaterialItems.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 font-sans">
-                        <td className="p-2 text-center font-mono font-bold border-r border-slate-200">{idx + 1}</td>
-                        <td className="p-2 border-r border-slate-200 font-semibold text-slate-900">{item.description}</td>
-                        <td className="p-2 text-center font-mono border-r border-slate-200">{item.hsnCode}</td>
-                        <td className="p-2 text-right font-mono border-r border-slate-200">{item.quantity}</td>
-                        <td className="p-2 text-center font-mono border-r border-slate-200">{item.unit}</td>
-                        <td className="p-2 text-right font-mono border-r border-slate-200">₹{item.rate.toLocaleString("en-IN")}</td>
-                        <td className="p-2 text-right font-mono border-r border-slate-200">{item.discountPct || 0}%</td>
-                        <td className="p-2 text-right font-mono font-bold text-slate-950">₹{item.amount.toLocaleString("en-IN")}</td>
+                        <td className="p-1.5 text-center font-mono font-bold border-r border-slate-200">{idx + 1}</td>
+                        <td className="p-1.5 border-r border-slate-200 font-semibold text-slate-900">{item.description}</td>
+                        <td className="p-1.5 text-center font-mono border-r border-slate-200">{item.hsnCode}</td>
+                        <td className="p-1.5 text-right font-mono border-r border-slate-200">{item.quantity}</td>
+                        <td className="p-1.5 text-center font-mono border-r border-slate-200">{item.unit}</td>
+                        <td className="p-1.5 text-right font-mono border-r border-slate-200">₹{item.rate.toLocaleString("en-IN")}</td>
+                        <td className="p-1.5 text-right font-mono border-r border-slate-200">{item.discountPct || 0}%</td>
+                        <td className="p-1.5 text-right font-mono font-bold text-slate-950">₹{item.amount.toLocaleString("en-IN")}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1007,7 +1008,7 @@ export default function InvoicesPage() {
               </div>
 
               {/* FINANCIAL CALCULATIONS & AUTO CALCULATED TOTALS */}
-              <div className="flex justify-between items-start border border-slate-300 rounded p-3 mb-4 text-[10px]">
+              <div className="flex justify-between items-start border border-slate-300 rounded p-2 mb-3 text-[9px]">
                 <div className="flex flex-col gap-2 max-w-md">
                   <div>
                     <span className="font-bold text-slate-600 font-mono uppercase text-[9px] block">Amount Chargeable (in words)</span>
@@ -1034,10 +1035,12 @@ export default function InvoicesPage() {
                     <span>SGST ({gstRate / 2}%):</span>
                     <span>₹{sgstAmount.toLocaleString("en-IN")}</span>
                   </div>
-                  <div className="flex justify-between text-slate-600 text-[9px]">
-                    <span>Round Off:</span>
-                    <span>{roundOff >= 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}</span>
-                  </div>
+                  {Math.abs(roundOff) > 0.001 && (
+                    <div className="flex justify-between text-slate-600 text-[9px]">
+                      <span>Round Off:</span>
+                      <span>{roundOff >= 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-slate-950 font-black border-t-2 border-slate-900 pt-1 text-sm mt-1">
                     <span>Grand Total:</span>
                     <span>₹{grandTotal.toLocaleString("en-IN")}</span>
@@ -1046,7 +1049,7 @@ export default function InvoicesPage() {
               </div>
 
               {/* HSN / SAC TAX BREAKDOWN SUMMARY TABLE */}
-              <div className="border border-slate-300 rounded overflow-hidden mb-4">
+              <div className="border border-slate-300 rounded overflow-hidden mb-3">
                 <div className="bg-slate-100 p-1.5 border-b border-slate-300 font-mono text-[9px] font-bold uppercase text-slate-800">
                   HSN / SAC Tax Breakdown Summary
                 </div>
@@ -1079,7 +1082,7 @@ export default function InvoicesPage() {
               </div>
 
               {/* DECLARATION, BANK DETAILS, SIGNATURE & SEAL */}
-              <div className="grid grid-cols-2 gap-4 border border-slate-300 rounded p-3 text-[9px] leading-relaxed mb-4">
+              <div className="grid grid-cols-2 gap-3 border border-slate-300 rounded p-2 text-[8px] leading-snug mb-2">
                 <div>
                   <span className="font-bold text-slate-700 uppercase font-mono tracking-wider block mb-1">Company Bank Details</span>
                   <p className="text-slate-800 font-mono"><strong>Bank:</strong> {branding?.bankName || "State Bank of India"}</p>
@@ -1096,10 +1099,7 @@ export default function InvoicesPage() {
                     <span className="font-bold text-slate-900 text-[10px] uppercase">For {branding?.companyName || "KOHINOOR ROLLING SHUTTERS"}</span>
                   </div>
 
-                  <div className="flex gap-4 items-end mt-8">
-                    <div className="w-24 h-16 border border-dashed border-slate-300 rounded flex items-center justify-center text-[8px] text-slate-400 font-mono">
-                      [ Company Seal ]
-                    </div>
+                  <div className="flex gap-3 items-end mt-6">
                     <div className="w-32 border-b border-slate-400 pb-1 text-center text-[9px] text-slate-600 font-mono">
                       Authorized Signatory
                     </div>

@@ -5,8 +5,9 @@ export async function GET() {
   try {
     const branding = await DataService.getCompanyBranding();
     return NextResponse.json(branding);
-  } catch (e) {
-    return NextResponse.json({ error: "Failed to fetch company branding" }, { status: 500 });
+  } catch (e: any) {
+    console.error("GET /api/admin/branding error:", e);
+    return NextResponse.json({ error: e?.message || "Failed to fetch company branding" }, { status: 500 });
   }
 }
 

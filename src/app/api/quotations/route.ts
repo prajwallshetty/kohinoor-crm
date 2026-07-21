@@ -5,8 +5,9 @@ export async function GET() {
   try {
     const quotations = await DataService.getQuotations();
     return NextResponse.json(quotations);
-  } catch (e) {
-    return NextResponse.json({ error: "Failed to fetch quotations" }, { status: 500 });
+  } catch (e: any) {
+    console.error("GET /api/quotations error:", e);
+    return NextResponse.json({ error: e?.message || "Failed to fetch quotations" }, { status: 500 });
   }
 }
 

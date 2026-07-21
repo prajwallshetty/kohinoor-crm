@@ -89,7 +89,8 @@ async function ensureDbConnection(): Promise<boolean> {
       await prisma.$queryRaw`SELECT 1`;
       isDbConnected = true;
       return true;
-    } catch (e) {
+    } catch (e: any) {
+      console.warn("DB Connection check failed, defaulting to mock DB:", e?.message || e);
       isDbConnected = false;
       return false;
     }
@@ -1234,6 +1235,7 @@ export const DataService = {
 
   // COMPANY BRANDING
   async getCompanyBranding() {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         let cb = await prisma.companyBranding.findFirst();

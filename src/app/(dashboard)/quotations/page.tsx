@@ -10,7 +10,6 @@ import {
 import { useAuth } from "@/components/providers/auth-provider";
 import { PageSkeleton } from "@/components/ui/loaders";
 import QRCode from "qrcode";
-import confetti from "canvas-confetti";
 
 interface Customer {
   id: string;
@@ -194,6 +193,7 @@ export default function QuotationsPage() {
 
   // New Quote Form & Wizard State
   const [showAddQuote, setShowAddQuote] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [formCustId, setFormCustId] = useState("");
@@ -532,6 +532,8 @@ export default function QuotationsPage() {
   // Submit single-page Rolling Shutter Configurator quotation
   const handleCreateQuotation = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (!isNewCustomer && !formCustId) {
       alert("Please select an existing customer profile.");
       return;
@@ -541,6 +543,7 @@ export default function QuotationsPage() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       let customerId = formCustId;
 
@@ -562,6 +565,7 @@ export default function QuotationsPage() {
         });
         if (!custRes.ok) {
           alert("Failed to register new customer profile.");
+          setIsSubmitting(false);
           return;
         }
         const newCust = await custRes.json();
@@ -629,11 +633,6 @@ export default function QuotationsPage() {
       });
 
       if (res.ok) {
-        confetti({
-          particleCount: 150,
-          spread: 80,
-          origin: { y: 0.6 }
-        });
         triggerToast("Rolling Shutter Quotation created successfully!");
         
         // Reset state
@@ -653,7 +652,10 @@ export default function QuotationsPage() {
         setShowAddQuote(false);
         fetchData();
       }
-    } catch (e) {}
+    } catch (e) {
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleUpdateStatus = async (id: string, newStatus: any) => {
@@ -1757,10 +1759,15 @@ export default function QuotationsPage() {
 
                 <button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer hover:scale-[1.01] transition-all"
+                  disabled={isSubmitting}
+                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-8 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer hover:scale-[1.01] transition-all"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>Save & Generate Shutter Quotation</span>
+                  {isSubmitting ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                  <span>{isSubmitting ? "Saving..." : "Save & Generate Shutter Quotation"}</span>
                 </button>
               </div>
 
@@ -1923,7 +1930,7 @@ export default function QuotationsPage() {
                 <div className="w-1/3 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 font-mono text-xs">
                   <div className="flex justify-between text-slate-600">
                     <span>Subtotal</span>
-                    <span className="font-bold text-slate-900">₹{(selectedQuote.totalAmount - selectedQuote.gstAmount + selectedQuote.discount).toLocaleString("en-IN")}</span>
+                    <span className="font-bold text-slate-900">₹{(selectedQuote.items?.reduce((sum: number, it: any) => sum + (it.lineTotal || 0), 0) || (selectedQuote.totalAmount - selectedQuote.gstAmount + selectedQuote.discount)).toLocaleString("en-IN")}</span>
                   </div>
 
                   {selectedQuote.discount > 0 && (

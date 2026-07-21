@@ -52,13 +52,4 @@ const authOptions: NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 
-async function authHandler(req: Request, res: any) {
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
-  if (host) {
-    const protocol = host.includes("localhost") || host.includes("127.0.0.1") || host.includes("10.") || host.includes("192.") ? "http" : "https";
-    process.env.NEXTAUTH_URL = `${protocol}://${host}`;
-  }
-  return handler(req, res);
-}
-
-export { authHandler as GET, authHandler as POST };
+export { handler as GET, handler as POST };

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { 
   CreditCard, Search, Landmark, Banknote, HelpCircle, 
-  ArrowDownRight, Check, RefreshCw
+  ArrowDownRight, Check, RefreshCw, Download, FileText, Printer
 } from "lucide-react";
 import { PageSkeleton } from "@/components/ui/loaders";
 
@@ -58,6 +58,32 @@ export default function PaymentsPage() {
   const upiTotal = filteredPayments.filter(p => p.paymentMethod === "UPI").reduce((sum, p) => sum + p.amount, 0);
   const cashTotal = filteredPayments.filter(p => p.paymentMethod === "CASH").reduce((sum, p) => sum + p.amount, 0);
   const bankTotal = filteredPayments.filter(p => p.paymentMethod === "BANK").reduce((sum, p) => sum + p.amount, 0);
+
+  const exportCSV = () => {
+    const headers = ["Transaction ID", "Invoice No", "Customer", "Allocation", "Payment Method", "Reference UTR", "Amount", "Date"];
+    const rows = filteredPayments.map(p => [
+      p.id,
+      p.invoice?.invoiceNumber || "N/A",
+      p.invoice?.customer?.name || "Individual",
+      p.paymentType || "INSTALMENT",
+      p.paymentMethod || "UPI",
+      p.transactionRef || "",
+      p.amount.toString(),
+      p.createdAt ? new Date(p.createdAt).toLocaleString("en-IN") : "N/A"
+    ]);
+    const csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `payment_ledger_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = () => {
+    window.print();
+  };
 
   if (loading) return <PageSkeleton rows={6} />;
 
@@ -123,13 +149,31 @@ export default function PaymentsPage() {
           />
         </div>
 
-        <button
-          onClick={fetchPayments}
-          className="p-2 bg-secondary/60 hover:bg-secondary border border-border/80 text-muted-foreground hover:text-foreground rounded-lg transition-all"
-          title="Refresh ledger"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-semibold transition-all print-hidden"
+            title="Export CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>CSV</span>
+          </button>
+          <button
+            onClick={exportPDF}
+            className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary rounded-lg text-xs font-semibold transition-all print-hidden"
+            title="Print / Save PDF"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>PDF</span>
+          </button>
+          <button
+            onClick={fetchPayments}
+            className="p-2 bg-secondary/60 hover:bg-secondary border border-border/80 text-muted-foreground hover:text-foreground rounded-lg transition-all print-hidden"
+            title="Refresh ledger"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Table grid */}
