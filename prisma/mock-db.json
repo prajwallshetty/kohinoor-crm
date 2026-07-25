@@ -144,6 +144,16 @@
       "transactionRef": "",
       "createdAt": "2026-07-20T08:23:45.523Z",
       "updatedAt": "2026-07-20T08:23:45.523Z"
+    },
+    {
+      "id": "p-1784637130730",
+      "invoiceId": "cf9bbffe-3557-459b-9f4c-5f0fde6f910d",
+      "amount": 18408,
+      "paymentType": "PARTIAL",
+      "paymentMethod": "UPI",
+      "transactionRef": "",
+      "createdAt": "2026-07-21T12:32:10.730Z",
+      "updatedAt": "2026-07-21T12:32:10.730Z"
     }
   ],
   "installationJobs": [
@@ -183,6 +193,14 @@
   ],
   "auditLogs": [
     {
+      "id": "al-1784888256203",
+      "userId": "u-1",
+      "userEmail": "owner@kohinoor.com",
+      "action": "QUOTATION_CREATE",
+      "details": "Created quotation number: QT-2026-8690",
+      "timestamp": "2026-07-24T10:17:36.203Z"
+    },
+    {
       "id": "al-1",
       "action": "CREATE_QUOTATION",
       "actor": "owner@kohinoor.com",
@@ -208,6 +226,7 @@
     "totalQuotaBytes": 10737418240,
     "usedBytes": 0
   },
+  "quotationMeta": {},
   "masterItems": [
     {
       "id": "mi-0",
@@ -798,6 +817,700 @@
       "isDisabled": false,
       "createdAt": "2026-07-20T07:57:46.301Z",
       "updatedAt": "2026-07-20T07:57:46.301Z"
+    },
+    {
+      "id": "mi-gear-0",
+      "category": "Patti Bracket",
+      "name": "GI Bracket",
+      "rate": 40.0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-1",
+      "category": "Patti Bracket",
+      "name": "Hubli Bracket",
+      "rate": 55.0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-2",
+      "category": "Guide Channel",
+      "name": "GC",
+      "rate": 80.0,
+      "unit": "FT",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-3",
+      "category": "Guide Channel",
+      "name": "GC (GI)",
+      "rate": 95.0,
+      "unit": "FT",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-4",
+      "category": "Guide Channel",
+      "name": "GC (3\" 14G)",
+      "rate": 140.0,
+      "unit": "FT",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-5",
+      "category": "Guide Channel",
+      "name": "GC (4\")",
+      "rate": 190.0,
+      "unit": "FT",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-6",
+      "category": "BR",
+      "name": "12 (GI)",
+      "rate": 300.0,
+      "unit": "PCS",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-7",
+      "category": "BR",
+      "name": "13/16 (MS)",
+      "rate": 380.0,
+      "unit": "PCS",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-8",
+      "category": "BR",
+      "name": "14/17 (MS)",
+      "rate": 480.0,
+      "unit": "PCS",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-9",
+      "category": "BR",
+      "name": "15 (MS)",
+      "rate": 620.0,
+      "unit": "PCS",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-10",
+      "category": "U Cup",
+      "name": "UCUP (M)",
+      "rate": 45.0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-11",
+      "category": "U Cup",
+      "name": "UCUP (GI-H)",
+      "rate": 70.0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-12",
+      "category": "Lock Set",
+      "name": "Standard",
+      "rate": 260.0,
+      "unit": "Set",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-13",
+      "category": "Ring",
+      "name": "Standard Ring",
+      "rate": 25.0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-14",
+      "category": "Gear Set",
+      "name": "Standard Gear Set",
+      "rate": 3500.0,
+      "unit": "Set",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-15",
+      "category": "Wheel",
+      "name": "6\"",
+      "rate": 200.0,
+      "unit": "PCS",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-16",
+      "category": "Wheel",
+      "name": "7\"",
+      "rate": 240.0,
+      "unit": "PCS",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    },
+    {
+      "id": "mi-gear-17",
+      "category": "Wheel",
+      "name": "8\"",
+      "rate": 260.0,
+      "unit": "PCS",
+      "isDisabled": false,
+      "createdAt": "2026-07-25T19:57:06.402681",
+      "updatedAt": "2026-07-25T19:57:06.402681"
+    }
+  ],
+  "quotationTemplates": [
+    {
+      "id": "qt-1",
+      "name": "Normal Shutter",
+      "description": "Standard manual pull-push rolling shutter. Auto-generates the full material list from width/height/material/thickness/profile.",
+      "active": true,
+      "displayOrder": 1,
+      "version": 1,
+      "rules": [
+        {
+          "id": "r-gi",
+          "label": "GI Sheet",
+          "materialCategory": "Material Types",
+          "defaultVariant": "{material}",
+          "formula": "ROUND((width * height) / 144, 2)",
+          "descriptionFormat": "{width} × {height} {material} ({thickness}-{profile})",
+          "unit": "Sft",
+          "exportVar": "",
+          "displayOrder": 1,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "r-bp",
+          "label": "Bottom Plate",
+          "materialCategory": "",
+          "defaultVariant": "BP",
+          "formula": "1",
+          "descriptionFormat": "{width} × 1 BP",
+          "unit": "Pcs",
+          "exportVar": "",
+          "displayOrder": 2,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "r-pipe",
+          "label": "Pipe",
+          "materialCategory": "Pipes",
+          "defaultVariant": "1½\"",
+          "formula": "ROUND((width + 0.75) / 12, 2)",
+          "descriptionFormat": "{width} × 1 PIPE ({variant})",
+          "unit": "Ft",
+          "exportVar": "pipeSize",
+          "displayOrder": 3,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": [
+            {
+              "field": "width",
+              "operator": "<",
+              "value": "80",
+              "setVariant": "1¼\""
+            }
+          ]
+        },
+        {
+          "id": "r-guide",
+          "label": "Guide Channel",
+          "materialCategory": "Guides",
+          "defaultVariant": "GC",
+          "formula": "ROUND((2 * height) / 12, 2)",
+          "descriptionFormat": "{height} × 2 GC",
+          "unit": "Ft",
+          "exportVar": "",
+          "displayOrder": 4,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "r-spring",
+          "label": "Spring",
+          "materialCategory": "Springs",
+          "defaultVariant": "SPR 5G",
+          "formula": "MAX(2, CEIL(width / 72))",
+          "descriptionFormat": "{variant} - {qty} PCS",
+          "unit": "Pcs",
+          "exportVar": "springType",
+          "resultVar": "",
+          "displayOrder": 5,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "r-bracket",
+          "label": "Bracket",
+          "materialCategory": "Brackets",
+          "defaultVariant": "13/16",
+          "formula": "2",
+          "descriptionFormat": "BRACKET {variant} - {qty} PCS",
+          "unit": "Pcs",
+          "exportVar": "",
+          "displayOrder": 6,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": [
+            {
+              "field": "height",
+              "operator": ">",
+              "value": "110",
+              "setVariant": "16MS"
+            }
+          ]
+        },
+        {
+          "id": "r-wheel",
+          "label": "Wheel",
+          "materialCategory": "Wheels",
+          "defaultVariant": "1½\"",
+          "formula": "3",
+          "descriptionFormat": "WHEEL {variant} - {qty} PCS",
+          "unit": "Pcs",
+          "exportVar": "",
+          "displayOrder": 7,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": [
+            {
+              "field": "pipeSize",
+              "operator": "==",
+              "value": "1¼\"",
+              "setVariant": "1¼\""
+            },
+            {
+              "field": "pipeSize",
+              "operator": "==",
+              "value": "1½\"",
+              "setVariant": "1½\""
+            }
+          ]
+        },
+        {
+          "id": "r-kabadi",
+          "label": "Kabadi",
+          "materialCategory": "Kabadi",
+          "defaultVariant": "GI Flat",
+          "formula": "6",
+          "descriptionFormat": "{width} × 6 KABADI ({thickness}-{material}-{profile})",
+          "unit": "Pcs",
+          "exportVar": "",
+          "displayOrder": 8,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "r-lock",
+          "label": "Lock",
+          "materialCategory": "Locks",
+          "defaultVariant": "Standard",
+          "formula": "1",
+          "descriptionFormat": "LOCK SET ({variant}) - {qty} PCS",
+          "unit": "Pcs",
+          "exportVar": "",
+          "displayOrder": 9,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "r-handle",
+          "label": "Handle",
+          "materialCategory": "Handles",
+          "defaultVariant": "MS",
+          "formula": "1",
+          "descriptionFormat": "HANDLE {variant} - {qty} PCS",
+          "unit": "Pcs",
+          "exportVar": "",
+          "displayOrder": 10,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "r-topcover",
+          "label": "Top Cover",
+          "materialCategory": "Top Caps",
+          "defaultVariant": "4\"",
+          "formula": "1",
+          "descriptionFormat": "{width} × 1 TOP COVER ({variant})",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 11,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "r-fittings",
+          "label": "Fittings",
+          "materialCategory": "Fittings",
+          "defaultVariant": "Basic",
+          "formula": "1",
+          "descriptionFormat": "FITTINGS ({variant}) - {qty} PCS",
+          "unit": "Pcs",
+          "exportVar": "",
+          "displayOrder": 12,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "r-clamp",
+          "label": "Clamp",
+          "materialCategory": "",
+          "defaultVariant": "Heavy Clamp",
+          "formula": "6",
+          "descriptionFormat": "CLAMP {variant} - {qty} PCS",
+          "unit": "Pcs",
+          "exportVar": "",
+          "displayOrder": 13,
+          "editable": true,
+          "includeWhen": {
+            "field": "height",
+            "operator": ">",
+            "value": "140"
+          },
+          "conditions": []
+        }
+      ],
+      "createdAt": "2026-07-25T14:23:28.778Z",
+      "updatedAt": "2026-07-25T14:23:28.778Z"
+    },
+    {
+      "id": "qt-2",
+      "name": "Gear Shutter",
+      "description": "Gear-operated rolling shutter. Auto-generates the full material list; dependent rules (Wheel → Ring → Kabadi) reuse previously calculated quantities.",
+      "active": true,
+      "displayOrder": 2,
+      "version": 1,
+      "rules": [
+        {
+          "id": "gr-gi",
+          "label": "GI Sheet",
+          "materialCategory": "Material Types",
+          "defaultVariant": "{material}",
+          "formula": "CEIL(height / 2.9) + 4",
+          "descriptionFormat": "{width} × {height} {material} ({thickness}-{profile})",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 1,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-patti",
+          "label": "Patti Bracket",
+          "materialCategory": "Patti Bracket",
+          "defaultVariant": "GI Bracket",
+          "formula": "CEIL(height / 2.9) + 4",
+          "descriptionFormat": "{variant}",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 2,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-pipe",
+          "label": "Pipe",
+          "materialCategory": "Pipes",
+          "defaultVariant": "1½\"",
+          "formula": "width + 10",
+          "descriptionFormat": "{pipeLength} × PIPE ({pipeSize})",
+          "unit": "Ft",
+          "exportVar": "pipeSize",
+          "resultVar": "pipeLength",
+          "displayOrder": 3,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-guide",
+          "label": "Guide Channel",
+          "materialCategory": "Guide Channel",
+          "defaultVariant": "GC",
+          "formula": "2",
+          "descriptionFormat": "{height} × 2 {variant}",
+          "unit": "Ft",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 4,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": [
+            {
+              "field": "width",
+              "operator": ">",
+              "value": "200",
+              "setVariant": "GC (4\")"
+            },
+            {
+              "field": "width",
+              "operator": ">",
+              "value": "156",
+              "setVariant": "GC (3\" 14G)"
+            }
+          ]
+        },
+        {
+          "id": "gr-spring",
+          "label": "Spring",
+          "materialCategory": "Springs",
+          "defaultVariant": "SPR 5G",
+          "formula": "MAX(2, CEIL(width / 72))",
+          "descriptionFormat": "{variant} - {qty} PCS",
+          "unit": "Pcs",
+          "exportVar": "springType",
+          "resultVar": "",
+          "displayOrder": 5,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-br",
+          "label": "BR",
+          "materialCategory": "BR",
+          "defaultVariant": "13/16 (MS)",
+          "formula": "2",
+          "descriptionFormat": "BRACKET {variant}",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 6,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": [
+            {
+              "field": "height",
+              "operator": ">",
+              "value": "132",
+              "setVariant": "15 (MS)"
+            },
+            {
+              "field": "height",
+              "operator": ">",
+              "value": "110",
+              "setVariant": "14/17 (MS)"
+            }
+          ]
+        },
+        {
+          "id": "gr-ucup",
+          "label": "U Cup",
+          "materialCategory": "U Cup",
+          "defaultVariant": "UCUP (M)",
+          "formula": "2",
+          "descriptionFormat": "{variant}",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 7,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-lock",
+          "label": "Lock Set",
+          "materialCategory": "Lock Set",
+          "defaultVariant": "Standard",
+          "formula": "1",
+          "descriptionFormat": "LOCK SET",
+          "unit": "Set",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 8,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-wheel",
+          "label": "Wheel",
+          "materialCategory": "Wheel",
+          "defaultVariant": "7\"",
+          "formula": "spring + 2",
+          "descriptionFormat": "WHEEL {wheelSize} ({pipeSize}) - {quantity} PCS",
+          "unit": "Pcs",
+          "exportVar": "wheelSize",
+          "resultVar": "",
+          "displayOrder": 9,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-ring",
+          "label": "Ring",
+          "materialCategory": "Ring",
+          "defaultVariant": "Standard Ring",
+          "formula": "wheel + 2",
+          "descriptionFormat": "RING - {quantity} PCS",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 10,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-kabadi",
+          "label": "Kabadi",
+          "materialCategory": "Kabadi",
+          "defaultVariant": "GI Flat",
+          "formula": "wheel * 3",
+          "descriptionFormat": "{kabadiWidth} × 6 KABADI ({material}-{thickness}-{profile})",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 11,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-handle",
+          "label": "Handle",
+          "materialCategory": "Handles",
+          "defaultVariant": "MS",
+          "formula": "2",
+          "descriptionFormat": "HANDLE",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 12,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-fittings",
+          "label": "Fittings",
+          "materialCategory": "Fittings",
+          "defaultVariant": "Basic",
+          "formula": "1",
+          "descriptionFormat": "FITTINGS",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 13,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-gearset",
+          "label": "Gear Set",
+          "materialCategory": "Gear Set",
+          "defaultVariant": "Standard Gear Set",
+          "formula": "1",
+          "descriptionFormat": "GEAR SET",
+          "unit": "Set",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 14,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        },
+        {
+          "id": "gr-topcover",
+          "label": "Top Cover",
+          "materialCategory": "Top Caps",
+          "defaultVariant": "4\"",
+          "formula": "1",
+          "descriptionFormat": "{width} × 1 TOP COVER ({variant})",
+          "unit": "Pcs",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 15,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        }
+      ],
+      "createdAt": "2026-07-25T14:23:28.778Z",
+      "updatedAt": "2026-07-25T14:23:28.778Z"
+    },
+    {
+      "id": "qt-3",
+      "name": "Motorized Shutter",
+      "description": "Motor-operated rolling shutter. Configure rules for this shutter type.",
+      "active": true,
+      "displayOrder": 3,
+      "version": 1,
+      "rules": [],
+      "createdAt": "2026-07-25T14:23:28.778Z",
+      "updatedAt": "2026-07-25T14:23:28.778Z"
+    },
+    {
+      "id": "qt-4",
+      "name": "Industrial Shutter",
+      "description": "Heavy industrial rolling shutter. Configure rules for this shutter type.",
+      "active": true,
+      "displayOrder": 4,
+      "version": 1,
+      "rules": [],
+      "createdAt": "2026-07-25T14:23:28.778Z",
+      "updatedAt": "2026-07-25T14:23:28.778Z"
     }
   ]
 }

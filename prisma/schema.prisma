@@ -149,7 +149,16 @@ model Quotation {
   parentQuoteId String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  
+
+  // Template Based Quotation Engine snapshot (pins a saved quote to a template version)
+  quotationDate        DateTime?
+  templateId           String?
+  templateName         String?
+  templateVersion      Int?
+  templateSnapshotJson String?
+  specJson             String?
+  formulaResultsJson   String?
+
   items         QuotationItem[]
   invoices      Invoice[]
 }
@@ -272,4 +281,20 @@ model MasterItem {
   updatedAt  DateTime @updatedAt
 
   @@unique([category, name])
+}
+
+// Template Based Quotation Engine
+// A template represents one shutter type (Normal, Gear, Motorized, Industrial).
+// Its ordered Rules (with formulas, description formats and visual conditions)
+// are stored as JSON so the reusable Rule Engine can execute them unchanged.
+model QuotationTemplate {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  active       Boolean  @default(true)
+  displayOrder Int      @default(0)
+  version      Int      @default(1)
+  rulesJson    String   @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

@@ -5,11 +5,12 @@ import {
   Receipt, Plus, Search, FileText, Printer, ArrowLeft, RefreshCw, 
   CreditCard, Calendar, Check, DollarSign, ExternalLink, Trash2,
   CheckCircle2, Clock, AlertCircle, Sparkles, Building, ChevronRight, User,
-  Landmark, Banknote, Smartphone
+  Landmark, Banknote, Smartphone, MessageSquare
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { PageSkeleton } from "@/components/ui/loaders";
 import QRCode from "qrcode";
+import { generateAndSharePDF } from "@/lib/share-pdf";
 
 interface Customer {
   id: string;
@@ -902,6 +903,34 @@ export default function InvoicesPage() {
                   <span>Log Payment Receipt</span>
                 </button>
               )}
+
+              <button
+                onClick={async () => {
+                  const btn = document.activeElement as HTMLButtonElement;
+                  if (btn) btn.disabled = true;
+                  try {
+                    await generateAndSharePDF({
+                      fileName: `Invoice_${selectedInvoice.invoiceNumber}`,
+                      phone: selectedInvoice.customer?.phone || "",
+                      message:
+                        `Hello ${selectedInvoice.customer?.name || ""},\n\n` +
+                        `Please find your Tax Invoice from ${branding?.companyName || "Kohinoor Rolling Shutters"}\n\n` +
+                        `📄 Invoice No: ${selectedInvoice.invoiceNumber}\n` +
+                        `📅 Date: ${new Date(selectedInvoice.createdAt).toLocaleDateString("en-IN")}\n` +
+                        `💰 Total Amount: ₹${Number(selectedInvoice.totalAmount).toLocaleString("en-IN")}\n` +
+                        `📊 Status: ${selectedInvoice.status}\n\n` +
+                        `Thank you for your business!\nRegards,\n${branding?.companyName || "Kohinoor Rolling Shutters"}`,
+                    });
+                  } finally {
+                    if (btn) btn.disabled = false;
+                  }
+                }}
+                className="border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/15 text-emerald-500 text-xs font-semibold py-1.5 px-3.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors"
+                title="Share PDF via WhatsApp"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>WhatsApp PDF</span>
+              </button>
 
               <button
                 onClick={() => window.print()}

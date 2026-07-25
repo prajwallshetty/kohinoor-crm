@@ -41,6 +41,8 @@ interface MockDataSchema {
   storageQuota: any;
   masterItems?: any[];
   bomItems?: any[];
+  quotationTemplates?: any[];
+  quotationMeta?: Record<string, any>;
 }
 
 // Initial seed data for the mock database
@@ -123,6 +125,27 @@ function writeMockDb(data: MockDataSchema) {
     fs.writeFileSync(MOCK_DB_FILE, JSON.stringify(data, null, 2));
   } catch (e) {
     console.error("Failed to write mock db file", e);
+  }
+}
+
+// Quotation template-engine metadata sidecar (works in both mock & live-DB modes
+// without a schema migration). Keyed by quotation id.
+function writeQuotationMeta(quotationId: string, meta: any) {
+  try {
+    const db = readMockDb();
+    if (!db.quotationMeta) db.quotationMeta = {};
+    db.quotationMeta[quotationId] = meta;
+    writeMockDb(db);
+  } catch (e) {
+    console.error("Failed to write quotation meta", e);
+  }
+}
+
+function readAllQuotationMeta(): Record<string, any> {
+  try {
+    return readMockDb().quotationMeta || {};
+  } catch (e) {
+    return {};
   }
 }
 
@@ -399,19 +422,22 @@ export const DataService = {
   // QUOTATIONS
   async getQuotations() {
     await ensureDbConnection();
+    const meta = readAllQuotationMeta();
     if (isDbConnected) {
       try {
-        return await prisma.quotation.findMany({
-          include: { 
-            customer: true, 
-            items: { include: { bomItems: true } }, 
-            lead: true 
+        const rows = await prisma.quotation.findMany({
+          include: {
+            customer: true,
+            items: { include: { bomItems: true } },
+            lead: true
           }
         });
+        return rows.map((r: any) => ({ ...(meta[r.id] || {}), ...r }));
       } catch (e) {}
     }
     const db = readMockDb();
     return db.quotations.map(q => ({
+      ...(meta[q.id] || {}),
       ...q,
       customer: db.customers.find(c => c.id === q.customerId),
       items: db.quotationItems.filter(qi => qi.quotationId === q.id).map(qi => ({
@@ -424,22 +450,25 @@ export const DataService = {
 
   async getQuotationById(id: string) {
     await ensureDbConnection();
+    const meta = readAllQuotationMeta();
     if (isDbConnected) {
       try {
-        return await prisma.quotation.findUnique({
+        const row = await prisma.quotation.findUnique({
           where: { id },
-          include: { 
-            customer: true, 
-            items: { include: { bomItems: true } }, 
-            lead: true 
+          include: {
+            customer: true,
+            items: { include: { bomItems: true } },
+            lead: true
           }
         });
+        return row ? { ...(meta[row.id] || {}), ...row } : null;
       } catch (e) {}
     }
     const db = readMockDb();
     const q = db.quotations.find(q => q.id === id);
     if (!q) return null;
     return {
+      ...(meta[q.id] || {}),
       ...q,
       customer: db.customers.find(c => c.id === q.customerId),
       items: db.quotationItems.filter(qi => qi.quotationId === q.id).map(qi => ({
@@ -469,9 +498,23 @@ export const DataService = {
       updatedAt: new Date().toISOString()
     };
 
+    // Template Based Quotation Engine snapshot. Stored in a local sidecar map so it
+    // persists in BOTH mock mode and when a live DB is connected, without requiring
+    // a schema migration. Per-line snapshots (description/variant/formula/result)
+    // are already pinned inside each item's configJson (an existing column).
+    const meta = {
+      quotationDate: quotation.quotationDate || new Date().toISOString(),
+      templateId: quotation.templateId || null,
+      templateName: quotation.templateName || null,
+      templateVersion: quotation.templateVersion !== undefined && quotation.templateVersion !== null ? parseInt(quotation.templateVersion) : null,
+      templateSnapshotJson: quotation.templateSnapshotJson || null,
+      specJson: quotation.specJson || null,
+      formulaResultsJson: quotation.formulaResultsJson || null
+    };
+
     if (isDbConnected) {
       try {
-        return await prisma.quotation.create({
+        const created = await prisma.quotation.create({
           data: {
             ...newQuote,
             items: { 
@@ -507,10 +550,12 @@ export const DataService = {
               }))
             }
           },
-          include: { 
+          include: {
             items: { include: { bomItems: true } }
           }
         });
+        writeQuotationMeta(created.id, meta);
+        return { ...created, ...meta };
       } catch (e) {
         console.error("DB addQuotation failed", e);
       }
@@ -518,6 +563,10 @@ export const DataService = {
 
     const db = readMockDb();
     db.quotations.push(newQuote);
+    // Set meta on the SAME db object (a standalone write here would race with the
+    // final writeMockDb below and clobber the quote/items just added).
+    if (!db.quotationMeta) db.quotationMeta = {};
+    db.quotationMeta[id] = meta;
     
     // Add items
     const addedItems = items.map((item, idx) => {
@@ -1402,8 +1451,152 @@ export const DataService = {
     db.masterItems = db.masterItems.filter(mi => mi.id !== id);
     writeMockDb(db);
     return true;
+  },
+
+  // ---------------------------------------------------------------------------
+  // QUOTATION TEMPLATES (Template Based Quotation Engine)
+  // ---------------------------------------------------------------------------
+  async getQuotationTemplates() {
+    await ensureDbConnection();
+    if (isDbConnected) {
+      try {
+        const count = await (prisma as any).quotationTemplate.count();
+        if (count === 0) {
+          for (const tpl of seedQuotationTemplates) {
+            await (prisma as any).quotationTemplate.create({
+              data: {
+                name: tpl.name,
+                description: tpl.description,
+                active: tpl.active,
+                displayOrder: tpl.displayOrder,
+                version: tpl.version,
+                rulesJson: JSON.stringify(tpl.rules)
+              }
+            });
+          }
+        }
+        const rows = await (prisma as any).quotationTemplate.findMany({ orderBy: { displayOrder: "asc" } });
+        return rows.map((r: any) => ({ ...r, rules: safeParse(r.rulesJson, []) }));
+      } catch (e) {}
+    }
+    const db = readMockDb();
+    if (!db.quotationTemplates) {
+      db.quotationTemplates = seedQuotationTemplates.map((tpl, idx) => ({
+        id: `qt-${idx + 1}`,
+        ...tpl,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+      writeMockDb(db);
+    }
+    const list = db.quotationTemplates || [];
+    return [...list].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+  },
+
+  async getQuotationTemplateById(id: string) {
+    const templates = await this.getQuotationTemplates();
+    return templates.find((t: any) => t.id === id) || null;
+  },
+
+  async addQuotationTemplate(template: any) {
+    await ensureDbConnection();
+    const rules = Array.isArray(template.rules) ? template.rules : [];
+    if (isDbConnected) {
+      try {
+        const row = await (prisma as any).quotationTemplate.create({
+          data: {
+            name: template.name || "New Template",
+            description: template.description || "",
+            active: template.active !== undefined ? template.active : true,
+            displayOrder: parseInt(template.displayOrder || 0),
+            version: 1,
+            rulesJson: JSON.stringify(rules)
+          }
+        });
+        return { ...row, rules: safeParse(row.rulesJson, []) };
+      } catch (e) {}
+    }
+    const db = readMockDb();
+    if (!db.quotationTemplates) db.quotationTemplates = [];
+    const newTemplate = {
+      id: `qt-${Date.now()}`,
+      name: template.name || "New Template",
+      description: template.description || "",
+      active: template.active !== undefined ? template.active : true,
+      displayOrder: parseInt(template.displayOrder || 0),
+      version: 1,
+      rules,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    db.quotationTemplates.push(newTemplate);
+    writeMockDb(db);
+    this.logAction("u-1", "owner@kohinoor.com", "TEMPLATE_CREATE", `Created quotation template: ${newTemplate.name}`);
+    return newTemplate;
+  },
+
+  async updateQuotationTemplate(id: string, updates: any) {
+    await ensureDbConnection();
+    // Bump version whenever the rule recipe changes so saved quotations stay pinned.
+    const rulesChanged = updates.rules !== undefined;
+    if (isDbConnected) {
+      try {
+        const existing = await (prisma as any).quotationTemplate.findUnique({ where: { id } });
+        const data: any = {};
+        if (updates.name !== undefined) data.name = updates.name;
+        if (updates.description !== undefined) data.description = updates.description;
+        if (updates.active !== undefined) data.active = updates.active;
+        if (updates.displayOrder !== undefined) data.displayOrder = parseInt(updates.displayOrder);
+        if (rulesChanged) {
+          data.rulesJson = JSON.stringify(updates.rules);
+          data.version = (existing?.version || 1) + 1;
+        }
+        const row = await (prisma as any).quotationTemplate.update({ where: { id }, data });
+        return { ...row, rules: safeParse(row.rulesJson, []) };
+      } catch (e) {}
+    }
+    const db = readMockDb();
+    if (!db.quotationTemplates) db.quotationTemplates = [];
+    const idx = db.quotationTemplates.findIndex(t => t.id === id);
+    if (idx === -1) return null;
+    const current = db.quotationTemplates[idx];
+    const updated = {
+      ...current,
+      ...updates,
+      version: rulesChanged ? (current.version || 1) + 1 : current.version || 1,
+      updatedAt: new Date().toISOString()
+    };
+    db.quotationTemplates[idx] = updated;
+    writeMockDb(db);
+    this.logAction("u-1", "owner@kohinoor.com", "TEMPLATE_UPDATE", `Updated quotation template: ${updated.name}`);
+    return updated;
+  },
+
+  async deleteQuotationTemplate(id: string) {
+    await ensureDbConnection();
+    if (isDbConnected) {
+      try {
+        await (prisma as any).quotationTemplate.delete({ where: { id } });
+        return true;
+      } catch (e) {}
+    }
+    const db = readMockDb();
+    if (!db.quotationTemplates) db.quotationTemplates = [];
+    db.quotationTemplates = db.quotationTemplates.filter(t => t.id !== id);
+    writeMockDb(db);
+    this.logAction("u-1", "owner@kohinoor.com", "TEMPLATE_DELETE", `Deleted quotation template ID: ${id}`);
+    return true;
   }
 };
+
+function safeParse(str: any, fallback: any) {
+  if (typeof str !== "string") return str || fallback;
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return fallback;
+  }
+}
 
 const seedMasterItems = [
   // 1. Material Categories
@@ -1517,6 +1710,33 @@ const seedMasterItems = [
   { category: "Color", name: "Dark Blue Powder Coat", rate: 18.0, unit: "Sft" },
   { category: "Color", name: "Custom RAL Powder Coat", rate: 25.0, unit: "Sft" },
 
+  // 17. Gear Shutter categories & variants (starter rates — owner maintains in Master Data)
+  { category: "Patti Bracket", name: "GI Bracket", rate: 40.0, unit: "Pcs" },
+  { category: "Patti Bracket", name: "Hubli Bracket", rate: 55.0, unit: "Pcs" },
+
+  { category: "Guide Channel", name: "GC", rate: 80.0, unit: "FT" },
+  { category: "Guide Channel", name: "GC (GI)", rate: 95.0, unit: "FT" },
+  { category: "Guide Channel", name: "GC (3\" 14G)", rate: 140.0, unit: "FT" },
+  { category: "Guide Channel", name: "GC (4\")", rate: 190.0, unit: "FT" },
+
+  { category: "BR", name: "12 (GI)", rate: 300.0, unit: "PCS" },
+  { category: "BR", name: "13/16 (MS)", rate: 380.0, unit: "PCS" },
+  { category: "BR", name: "14/17 (MS)", rate: 480.0, unit: "PCS" },
+  { category: "BR", name: "15 (MS)", rate: 620.0, unit: "PCS" },
+
+  { category: "U Cup", name: "UCUP (M)", rate: 45.0, unit: "Pcs" },
+  { category: "U Cup", name: "UCUP (GI-H)", rate: 70.0, unit: "Pcs" },
+
+  { category: "Lock Set", name: "Standard", rate: 260.0, unit: "Set" },
+
+  { category: "Ring", name: "Standard Ring", rate: 25.0, unit: "Pcs" },
+
+  { category: "Gear Set", name: "Standard Gear Set", rate: 3500.0, unit: "Set" },
+
+  { category: "Wheel", name: "6\"", rate: 200.0, unit: "PCS" },
+  { category: "Wheel", name: "7\"", rate: 240.0, unit: "PCS" },
+  { category: "Wheel", name: "8\"", rate: 260.0, unit: "PCS" },
+
   // 16. Dynamic Category Fields Definitions (Loaded directly by Quotation Engine)
   { category: "Fields: GI Sheet", name: "Material|dropdown|Material Types", rate: 0.0, unit: "Pcs" },
   { category: "Fields: GI Sheet", name: "Thickness|dropdown|Thickness", rate: 0.0, unit: "Pcs" },
@@ -1601,5 +1821,234 @@ const seedMasterItems = [
   { category: "Fields: Fittings", name: "Fittings Type|dropdown|Fittings", rate: 0.0, unit: "Pcs" },
   { category: "Fields: Fittings", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
   { category: "Fields: Fittings", name: "Rate|currency", rate: 0.0, unit: "Pcs" }
+];
+
+// ---------------------------------------------------------------------------
+// Seed Quotation Templates (Template Based Quotation Engine)
+// ---------------------------------------------------------------------------
+// The "Normal Shutter" template is fully wired to the seeded Master Data so it
+// generates a complete quotation out of the box. Gear / Motorized / Industrial
+// are created empty for the owner to configure. All values are editable data,
+// never hardcoded in engine logic.
+// Shared rule definitions — single source of truth so multiple shutter templates
+// reuse identical business logic instead of duplicating it (per the Gear Shutter
+// requirement to reuse the existing Spring and Top Cover calculations).
+const springRule = (id: string, displayOrder: number) => ({
+  id, label: "Spring", materialCategory: "Springs",
+  defaultVariant: "SPR 5G", formula: "MAX(2, CEIL(width / 72))",
+  descriptionFormat: "{variant} - {qty} PCS", unit: "Pcs",
+  exportVar: "springType", resultVar: "", displayOrder, editable: true,
+  includeWhen: null as any, conditions: [] as any[]
+});
+
+const topCoverRule = (id: string, displayOrder: number) => ({
+  id, label: "Top Cover", materialCategory: "Top Caps",
+  defaultVariant: "4\"", formula: "1",
+  descriptionFormat: "{width} × 1 TOP COVER ({variant})", unit: "Pcs",
+  exportVar: "", resultVar: "", displayOrder, editable: true,
+  includeWhen: null as any, conditions: [] as any[]
+});
+
+const seedQuotationTemplates = [
+  {
+    name: "Normal Shutter",
+    description: "Standard manual pull-push rolling shutter. Auto-generates the full material list from width/height/material/thickness/profile.",
+    active: true,
+    displayOrder: 1,
+    version: 1,
+    rules: [
+      {
+        id: "r-gi", label: "GI Sheet", materialCategory: "Material Types",
+        defaultVariant: "{material}", formula: "ROUND((width * height) / 144, 2)",
+        descriptionFormat: "{width} × {height} {material} ({thickness}-{profile})",
+        unit: "Sft", exportVar: "", displayOrder: 1, editable: true,
+        includeWhen: null, conditions: []
+      },
+      {
+        id: "r-bp", label: "Bottom Plate", materialCategory: "",
+        defaultVariant: "BP", formula: "1",
+        descriptionFormat: "{width} × 1 BP", unit: "Pcs", exportVar: "",
+        displayOrder: 2, editable: true, includeWhen: null, conditions: []
+      },
+      {
+        id: "r-pipe", label: "Pipe", materialCategory: "Pipes",
+        defaultVariant: "1½\"", formula: "ROUND((width + 0.75) / 12, 2)",
+        descriptionFormat: "{width} × 1 PIPE ({variant})", unit: "Ft",
+        exportVar: "pipeSize", displayOrder: 3, editable: true, includeWhen: null,
+        conditions: [
+          { field: "width", operator: "<", value: "80", setVariant: "1¼\"" }
+        ]
+      },
+      {
+        id: "r-guide", label: "Guide Channel", materialCategory: "Guides",
+        defaultVariant: "GC", formula: "ROUND((2 * height) / 12, 2)",
+        descriptionFormat: "{height} × 2 GC", unit: "Ft", exportVar: "",
+        displayOrder: 4, editable: true, includeWhen: null, conditions: []
+      },
+      springRule("r-spring", 5),
+      {
+        id: "r-bracket", label: "Bracket", materialCategory: "Brackets",
+        defaultVariant: "13/16", formula: "2",
+        descriptionFormat: "BRACKET {variant} - {qty} PCS", unit: "Pcs", exportVar: "",
+        displayOrder: 6, editable: true, includeWhen: null,
+        conditions: [
+          { field: "height", operator: ">", value: "110", setVariant: "16MS" }
+        ]
+      },
+      {
+        id: "r-wheel", label: "Wheel", materialCategory: "Wheels",
+        defaultVariant: "1½\"", formula: "3",
+        descriptionFormat: "WHEEL {variant} - {qty} PCS", unit: "Pcs", exportVar: "",
+        displayOrder: 7, editable: true, includeWhen: null,
+        conditions: [
+          { field: "pipeSize", operator: "==", value: "1¼\"", setVariant: "1¼\"" },
+          { field: "pipeSize", operator: "==", value: "1½\"", setVariant: "1½\"" }
+        ]
+      },
+      {
+        id: "r-kabadi", label: "Kabadi", materialCategory: "Kabadi",
+        defaultVariant: "GI Flat", formula: "6",
+        descriptionFormat: "{width} × 6 KABADI ({thickness}-{material}-{profile})",
+        unit: "Pcs", exportVar: "", displayOrder: 8, editable: true,
+        includeWhen: null, conditions: []
+      },
+      {
+        id: "r-lock", label: "Lock", materialCategory: "Locks",
+        defaultVariant: "Standard", formula: "1",
+        descriptionFormat: "LOCK SET ({variant}) - {qty} PCS", unit: "Pcs", exportVar: "",
+        displayOrder: 9, editable: true, includeWhen: null, conditions: []
+      },
+      {
+        id: "r-handle", label: "Handle", materialCategory: "Handles",
+        defaultVariant: "MS", formula: "1",
+        descriptionFormat: "HANDLE {variant} - {qty} PCS", unit: "Pcs", exportVar: "",
+        displayOrder: 10, editable: true, includeWhen: null, conditions: []
+      },
+      topCoverRule("r-topcover", 11),
+      {
+        id: "r-fittings", label: "Fittings", materialCategory: "Fittings",
+        defaultVariant: "Basic", formula: "1",
+        descriptionFormat: "FITTINGS ({variant}) - {qty} PCS", unit: "Pcs", exportVar: "",
+        displayOrder: 12, editable: true, includeWhen: null, conditions: []
+      },
+      {
+        id: "r-clamp", label: "Clamp", materialCategory: "",
+        defaultVariant: "Heavy Clamp", formula: "6",
+        descriptionFormat: "CLAMP {variant} - {qty} PCS", unit: "Pcs", exportVar: "",
+        displayOrder: 13, editable: true,
+        includeWhen: { field: "height", operator: ">", value: "140" },
+        conditions: []
+      }
+    ]
+  },
+  {
+    name: "Gear Shutter",
+    description: "Gear-operated rolling shutter. Auto-generates the full material list; dependent rules (Wheel → Ring → Kabadi) reuse previously calculated quantities.",
+    active: true, displayOrder: 2, version: 1,
+    rules: [
+      {
+        id: "gr-gi", label: "GI Sheet", materialCategory: "Material Types",
+        defaultVariant: "{material}", formula: "CEIL(height / 2.9) + 4",
+        descriptionFormat: "{width} × {height} {material} ({thickness}-{profile})",
+        unit: "Pcs", exportVar: "", resultVar: "", displayOrder: 1, editable: true,
+        includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-patti", label: "Patti Bracket", materialCategory: "Patti Bracket",
+        defaultVariant: "GI Bracket", formula: "CEIL(height / 2.9) + 4",
+        descriptionFormat: "{variant}", unit: "Pcs", exportVar: "", resultVar: "",
+        displayOrder: 2, editable: true, includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-pipe", label: "Pipe", materialCategory: "Pipes",
+        defaultVariant: "1½\"", formula: "width + 10",
+        descriptionFormat: "{pipeLength} × PIPE ({pipeSize})", unit: "Ft",
+        exportVar: "pipeSize", resultVar: "pipeLength", displayOrder: 3, editable: true,
+        includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-guide", label: "Guide Channel", materialCategory: "Guide Channel",
+        defaultVariant: "GC", formula: "2",
+        descriptionFormat: "{height} × 2 {variant}", unit: "Ft", exportVar: "", resultVar: "",
+        displayOrder: 4, editable: true, includeWhen: null,
+        conditions: [
+          { field: "width", operator: ">", value: "200", setVariant: "GC (4\")" },
+          { field: "width", operator: ">", value: "156", setVariant: "GC (3\" 14G)" }
+        ]
+      },
+      springRule("gr-spring", 5),
+      {
+        id: "gr-br", label: "BR", materialCategory: "BR",
+        defaultVariant: "13/16 (MS)", formula: "2",
+        descriptionFormat: "BRACKET {variant}", unit: "Pcs", exportVar: "", resultVar: "",
+        displayOrder: 6, editable: true, includeWhen: null,
+        conditions: [
+          { field: "height", operator: ">", value: "132", setVariant: "15 (MS)" },
+          { field: "height", operator: ">", value: "110", setVariant: "14/17 (MS)" }
+        ]
+      },
+      {
+        id: "gr-ucup", label: "U Cup", materialCategory: "U Cup",
+        defaultVariant: "UCUP (M)", formula: "2",
+        descriptionFormat: "{variant}", unit: "Pcs", exportVar: "", resultVar: "",
+        displayOrder: 7, editable: true, includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-lock", label: "Lock Set", materialCategory: "Lock Set",
+        defaultVariant: "Standard", formula: "1",
+        descriptionFormat: "LOCK SET", unit: "Set", exportVar: "", resultVar: "",
+        displayOrder: 8, editable: true, includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-wheel", label: "Wheel", materialCategory: "Wheel",
+        defaultVariant: "7\"", formula: "spring + 2",
+        descriptionFormat: "WHEEL {wheelSize} ({pipeSize}) - {quantity} PCS", unit: "Pcs",
+        exportVar: "wheelSize", resultVar: "", displayOrder: 9, editable: true,
+        includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-ring", label: "Ring", materialCategory: "Ring",
+        defaultVariant: "Standard Ring", formula: "wheel + 2",
+        descriptionFormat: "RING - {quantity} PCS", unit: "Pcs", exportVar: "", resultVar: "",
+        displayOrder: 10, editable: true, includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-kabadi", label: "Kabadi", materialCategory: "Kabadi",
+        defaultVariant: "GI Flat", formula: "wheel * 3",
+        descriptionFormat: "{kabadiWidth} × 6 KABADI ({material}-{thickness}-{profile})",
+        unit: "Pcs", exportVar: "", resultVar: "", displayOrder: 11, editable: true,
+        includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-handle", label: "Handle", materialCategory: "Handles",
+        defaultVariant: "MS", formula: "2",
+        descriptionFormat: "HANDLE", unit: "Pcs", exportVar: "", resultVar: "",
+        displayOrder: 12, editable: true, includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-fittings", label: "Fittings", materialCategory: "Fittings",
+        defaultVariant: "Basic", formula: "1",
+        descriptionFormat: "FITTINGS", unit: "Pcs", exportVar: "", resultVar: "",
+        displayOrder: 13, editable: true, includeWhen: null, conditions: []
+      },
+      {
+        id: "gr-gearset", label: "Gear Set", materialCategory: "Gear Set",
+        defaultVariant: "Standard Gear Set", formula: "1",
+        descriptionFormat: "GEAR SET", unit: "Set", exportVar: "", resultVar: "",
+        displayOrder: 14, editable: true, includeWhen: null, conditions: []
+      },
+      topCoverRule("gr-topcover", 15)
+    ]
+  },
+  {
+    name: "Motorized Shutter",
+    description: "Motor-operated rolling shutter. Configure rules for this shutter type.",
+    active: true, displayOrder: 3, version: 1, rules: []
+  },
+  {
+    name: "Industrial Shutter",
+    description: "Heavy industrial rolling shutter. Configure rules for this shutter type.",
+    active: true, displayOrder: 4, version: 1, rules: []
+  }
 ];
 

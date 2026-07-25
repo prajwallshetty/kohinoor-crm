@@ -13,7 +13,8 @@ import {
   CreditCard,
   Settings,
   LogOut,
-  Database
+  Database,
+  LayoutTemplate
 } from "lucide-react";
 
 export function Sidebar() {
@@ -29,6 +30,7 @@ export function Sidebar() {
     { name: "Invoices", href: "/invoices", icon: Receipt },
     { name: "Payments Ledger", href: "/payments", icon: CreditCard },
     { name: "Master Data", href: "/master-data", icon: Database },
+    { name: "Quotation Templates", href: "/quotation-templates", icon: LayoutTemplate },
     { name: "Admin Branding", href: "/admin", icon: Settings }
   ];
 
