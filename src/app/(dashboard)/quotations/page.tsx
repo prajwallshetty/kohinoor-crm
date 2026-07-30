@@ -56,10 +56,13 @@ interface Quotation {
   parentQuoteId?: string;
   createdAt: string;
   quotationDate?: string;
+  bookNumber?: string;
   templateName?: string;
   customer?: Customer;
   items: QuoteItem[];
 }
+
+const BOOK_NUMBER_OPTIONS = ["Book 1", "Book 2", "Book 3"];
 
 // A generated / editable line in the create flow
 interface GenLine {
@@ -109,6 +112,9 @@ export default function QuotationsPage() {
   const [formGstRate, setFormGstRate] = useState("18");
   const [formStatus, setFormStatus] = useState<"DRAFT" | "SENT" | "APPROVED" | "REJECTED">("DRAFT");
   const [formTerms, setFormTerms] = useState("");
+
+  // Book Number (mandatory, chosen right after the customer, before the template)
+  const [bookNumber, setBookNumber] = useState("");
 
   // Template + shutter spec (the only inputs the salesperson provides)
   const [quotationDate, setQuotationDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -214,6 +220,7 @@ export default function QuotationsPage() {
     setFormDiscount("0");
     setFormGstOff(true);
     setFormStatus("DRAFT");
+    setBookNumber("");
     setSelectedTemplateId("");
     setSpecMaterial(materialOptions[0] || "");
     setSpecThickness(thicknessOptions[0] || "");
@@ -233,6 +240,10 @@ export default function QuotationsPage() {
 
   // --- Generate ---
   const handleGenerate = () => {
+    if (!bookNumber) {
+      alert("Please select a Book Number first.");
+      return;
+    }
     const tpl = templates.find((t) => t.id === selectedTemplateId);
     if (!tpl) {
       alert("Please select a quotation template.");
@@ -341,6 +352,10 @@ export default function QuotationsPage() {
       alert("Customer Name, Phone and Billing Address are required.");
       return;
     }
+    if (!bookNumber) {
+      alert("Please select a Book Number.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -413,6 +428,7 @@ export default function QuotationsPage() {
             terms: formTerms,
             status: formStatus,
             quotationDate: new Date(quotationDate).toISOString(),
+            bookNumber,
             templateId: tpl?.id || null,
             templateName: tpl?.name || null,
             templateVersion: tpl?.version ?? null,
@@ -518,6 +534,7 @@ export default function QuotationsPage() {
         `Please find your Quotation from ${branding?.companyName || "Kohinoor Rolling Shutters"}\n\n` +
         `📋 Quote No: ${q.quoteNumber}\n` +
         `📅 Date: ${new Date(q.quotationDate || q.createdAt).toLocaleDateString("en-IN")}\n` +
+        (q.bookNumber ? `📖 Book No: ${q.bookNumber}\n` : "") +
         `💰 Total Amount: ₹${q.totalAmount.toLocaleString("en-IN")}\n` +
         `📊 Status: ${q.status}\n\n` +
         `Thank you!\nRegards,\n${branding?.companyName || "Kohinoor Rolling Shutters"}`,
@@ -527,7 +544,7 @@ export default function QuotationsPage() {
   const shareEmail = (q: Quotation) => {
     const subject = encodeURIComponent(`Quotation ${q.quoteNumber} - Kohinoor Rolling Shutters`);
     const body = encodeURIComponent(
-      `Dear Customer,\n\nPlease find attached quotation details.\nQuotation Number: ${q.quoteNumber}\nTotal Amount: ₹${q.totalAmount.toLocaleString("en-IN")}\n\nWarm regards,\nKohinoor Rolling Shutters`
+      `Dear Customer,\n\nPlease find attached quotation details.\nQuotation Number: ${q.quoteNumber}\n${q.bookNumber ? `Book Number: ${q.bookNumber}\n` : ""}Total Amount: ₹${q.totalAmount.toLocaleString("en-IN")}\n\nWarm regards,\nKohinoor Rolling Shutters`
     );
     window.open(`mailto:${q.customer?.email || ""}?subject=${subject}&body=${body}`, "_blank");
   };
@@ -599,6 +616,7 @@ export default function QuotationsPage() {
                   <tr className="bg-secondary/20 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border-b border-border/60">
                     <th className="p-4">Quote Number</th>
                     <th className="p-4">Customer</th>
+                    <th className="p-4">Book #</th>
                     <th className="p-4">Template</th>
                     <th className="p-4">Revision</th>
                     <th className="p-4 text-right">Taxable Subtotal</th>
@@ -610,7 +628,7 @@ export default function QuotationsPage() {
                 <tbody className="divide-y divide-border/60 text-xs">
                   {filteredQuotes.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center p-8 text-muted-foreground">
+                      <td colSpan={9} className="text-center p-8 text-muted-foreground">
                         No quotes found matching filter parameters.
                       </td>
                     </tr>
@@ -625,6 +643,15 @@ export default function QuotationsPage() {
                               <span className="font-semibold text-foreground">{q.customer?.name}</span>
                               <span className="text-[10px] text-muted-foreground">{q.customer?.phone}</span>
                             </div>
+                          </td>
+                          <td className="p-4">
+                            {q.bookNumber ? (
+                              <span className="text-[10px] font-mono font-bold bg-secondary/80 border px-1.5 py-0.5 rounded">
+                                {q.bookNumber}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </td>
                           <td className="p-4 text-muted-foreground font-sans">
                             {q.templateName || "—"}
@@ -808,6 +835,9 @@ export default function QuotationsPage() {
                 </span>
                 {selectedQuote.templateName && (
                   <span className="text-[10px] text-slate-400 font-mono">Template: {selectedQuote.templateName}</span>
+                )}
+                {selectedQuote.bookNumber && (
+                  <span className="text-[10px] text-slate-400 font-mono">Book No: {selectedQuote.bookNumber}</span>
                 )}
               </div>
             </div>
@@ -1052,6 +1082,30 @@ export default function QuotationsPage() {
                 )}
               </div>
 
+              {/* Book Number (mandatory, chosen right after the customer) */}
+              <div className="bg-secondary/15 border border-border/70 p-4 rounded-xl space-y-2">
+                <label className="font-bold text-xs text-foreground uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5 text-primary" />
+                  <span>Book Number *</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {BOOK_NUMBER_OPTIONS.map((b) => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setBookNumber(b)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        bookNumber === b
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                          : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Spec inputs */}
               <div className="border border-border/80 p-5 rounded-2xl bg-card space-y-4">
                 <div className="flex justify-between items-center border-b border-border/50 pb-2">
@@ -1151,11 +1205,15 @@ export default function QuotationsPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end items-center gap-2">
+                  {!bookNumber && (
+                    <span className="text-[11px] text-amber-500 font-semibold">Select a Book Number above first</span>
+                  )}
                   <button
                     type="button"
                     onClick={handleGenerate}
-                    className="bg-primary text-primary-foreground hover:bg-primary/95 font-bold px-6 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-primary/20 cursor-pointer hover:scale-[1.01] transition-all"
+                    disabled={!bookNumber}
+                    className="bg-primary text-primary-foreground hover:bg-primary/95 disabled:opacity-40 disabled:cursor-not-allowed font-bold px-6 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-primary/20 cursor-pointer hover:scale-[1.01] transition-all"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>Generate Quotation</span>

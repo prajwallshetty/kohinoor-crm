@@ -504,6 +504,7 @@ export const DataService = {
     // are already pinned inside each item's configJson (an existing column).
     const meta = {
       quotationDate: quotation.quotationDate || new Date().toISOString(),
+      bookNumber: quotation.bookNumber || null,
       templateId: quotation.templateId || null,
       templateName: quotation.templateName || null,
       templateVersion: quotation.templateVersion !== undefined && quotation.templateVersion !== null ? parseInt(quotation.templateVersion) : null,
@@ -1737,6 +1738,19 @@ const seedMasterItems = [
   { category: "Wheel", name: "7\"", rate: 240.0, unit: "PCS" },
   { category: "Wheel", name: "8\"", rate: 260.0, unit: "PCS" },
 
+  // 18. Motorized Shutter categories & variants (starter rates — owner maintains in Master Data)
+  { category: "Motor Pipe", name: "4\"", rate: 220.0, unit: "Ft" },
+  { category: "Motor Pipe", name: "5\"", rate: 260.0, unit: "Ft" },
+  { category: "Motor Pipe", name: "6\"", rate: 310.0, unit: "Ft" },
+  { category: "Motor Pipe", name: "8\"", rate: 380.0, unit: "Ft" },
+
+  { category: "Motor", name: "400 KG", rate: 8500.0, unit: "Pcs" },
+  { category: "Motor", name: "600 KG", rate: 10500.0, unit: "Pcs" },
+  { category: "Motor", name: "800 KG", rate: 13000.0, unit: "Pcs" },
+  { category: "Motor", name: "1000 KG", rate: 16000.0, unit: "Pcs" },
+  { category: "Motor", name: "1300 KG", rate: 19500.0, unit: "Pcs" },
+  { category: "Motor", name: "1500 KG", rate: 23500.0, unit: "Pcs" },
+
   // 16. Dynamic Category Fields Definitions (Loaded directly by Quotation Engine)
   { category: "Fields: GI Sheet", name: "Material|dropdown|Material Types", rate: 0.0, unit: "Pcs" },
   { category: "Fields: GI Sheet", name: "Thickness|dropdown|Thickness", rate: 0.0, unit: "Pcs" },
@@ -1849,6 +1863,84 @@ const topCoverRule = (id: string, displayOrder: number) => ({
   includeWhen: null as any, conditions: [] as any[]
 });
 
+const bottomPlateRule = (id: string, displayOrder: number) => ({
+  id, label: "Bottom Plate", materialCategory: "",
+  defaultVariant: "BP", formula: "1",
+  descriptionFormat: "{width} × 1 BP", unit: "Pcs",
+  exportVar: "", resultVar: "", displayOrder, editable: true,
+  includeWhen: null as any, conditions: [] as any[]
+});
+
+const giSheetGearStyleRule = (id: string, displayOrder: number) => ({
+  id, label: "GI Sheet", materialCategory: "Material Types",
+  defaultVariant: "{material}", formula: "CEIL(height / 2.9) + 4",
+  descriptionFormat: "{width} × {height} {material} ({thickness}-{profile})",
+  unit: "Pcs", exportVar: "", resultVar: "", displayOrder, editable: true,
+  includeWhen: null as any, conditions: [] as any[]
+});
+
+const guideChannelGearStyleRule = (id: string, displayOrder: number) => ({
+  id, label: "Guide Channel", materialCategory: "Guide Channel",
+  defaultVariant: "GC", formula: "2",
+  descriptionFormat: "{height} × 2 {variant}", unit: "Ft",
+  exportVar: "", resultVar: "", displayOrder, editable: true, includeWhen: null as any,
+  conditions: [
+    { field: "width", operator: ">", value: "200", setVariant: "GC (4\")" },
+    { field: "width", operator: ">", value: "156", setVariant: "GC (3\" 14G)" }
+  ] as any[]
+});
+
+const bracketBRRule = (id: string, displayOrder: number) => ({
+  id, label: "BR", materialCategory: "BR",
+  defaultVariant: "13/16 (MS)", formula: "2",
+  descriptionFormat: "BRACKET {variant}", unit: "Pcs",
+  exportVar: "", resultVar: "", displayOrder, editable: true, includeWhen: null as any,
+  conditions: [
+    { field: "height", operator: ">", value: "132", setVariant: "15 (MS)" },
+    { field: "height", operator: ">", value: "110", setVariant: "14/17 (MS)" }
+  ] as any[]
+});
+
+const uCupRule = (id: string, displayOrder: number) => ({
+  id, label: "U Cup", materialCategory: "U Cup",
+  defaultVariant: "UCUP (M)", formula: "2",
+  descriptionFormat: "{variant}", unit: "Pcs",
+  exportVar: "", resultVar: "", displayOrder, editable: true,
+  includeWhen: null as any, conditions: [] as any[]
+});
+
+const lockSetRule = (id: string, displayOrder: number) => ({
+  id, label: "Lock Set", materialCategory: "Lock Set",
+  defaultVariant: "Standard", formula: "1",
+  descriptionFormat: "LOCK SET", unit: "Set",
+  exportVar: "", resultVar: "", displayOrder, editable: true,
+  includeWhen: null as any, conditions: [] as any[]
+});
+
+const wheelGearStyleRule = (id: string, displayOrder: number) => ({
+  id, label: "Wheel", materialCategory: "Wheel",
+  defaultVariant: "7\"", formula: "spring + 2",
+  descriptionFormat: "WHEEL {wheelSize} ({pipeSize}) - {quantity} PCS", unit: "Pcs",
+  exportVar: "wheelSize", resultVar: "", displayOrder, editable: true,
+  includeWhen: null as any, conditions: [] as any[]
+});
+
+const handleGearStyleRule = (id: string, displayOrder: number) => ({
+  id, label: "Handle", materialCategory: "Handles",
+  defaultVariant: "MS", formula: "2",
+  descriptionFormat: "HANDLE", unit: "Pcs",
+  exportVar: "", resultVar: "", displayOrder, editable: true,
+  includeWhen: null as any, conditions: [] as any[]
+});
+
+const fittingsGearStyleRule = (id: string, displayOrder: number) => ({
+  id, label: "Fittings", materialCategory: "Fittings",
+  defaultVariant: "Basic", formula: "1",
+  descriptionFormat: "FITTINGS", unit: "Pcs",
+  exportVar: "", resultVar: "", displayOrder, editable: true,
+  includeWhen: null as any, conditions: [] as any[]
+});
+
 const seedQuotationTemplates = [
   {
     name: "Normal Shutter",
@@ -1864,12 +1956,7 @@ const seedQuotationTemplates = [
         unit: "Sft", exportVar: "", displayOrder: 1, editable: true,
         includeWhen: null, conditions: []
       },
-      {
-        id: "r-bp", label: "Bottom Plate", materialCategory: "",
-        defaultVariant: "BP", formula: "1",
-        descriptionFormat: "{width} × 1 BP", unit: "Pcs", exportVar: "",
-        displayOrder: 2, editable: true, includeWhen: null, conditions: []
-      },
+      bottomPlateRule("r-bp", 2),
       {
         id: "r-pipe", label: "Pipe", materialCategory: "Pipes",
         defaultVariant: "1½\"", formula: "ROUND((width + 0.75) / 12, 2)",
@@ -1946,13 +2033,7 @@ const seedQuotationTemplates = [
     description: "Gear-operated rolling shutter. Auto-generates the full material list; dependent rules (Wheel → Ring → Kabadi) reuse previously calculated quantities.",
     active: true, displayOrder: 2, version: 1,
     rules: [
-      {
-        id: "gr-gi", label: "GI Sheet", materialCategory: "Material Types",
-        defaultVariant: "{material}", formula: "CEIL(height / 2.9) + 4",
-        descriptionFormat: "{width} × {height} {material} ({thickness}-{profile})",
-        unit: "Pcs", exportVar: "", resultVar: "", displayOrder: 1, editable: true,
-        includeWhen: null, conditions: []
-      },
+      giSheetGearStyleRule("gr-gi", 1),
       {
         id: "gr-patti", label: "Patti Bracket", materialCategory: "Patti Bracket",
         defaultVariant: "GI Bracket", formula: "CEIL(height / 2.9) + 4",
@@ -1966,46 +2047,12 @@ const seedQuotationTemplates = [
         exportVar: "pipeSize", resultVar: "pipeLength", displayOrder: 3, editable: true,
         includeWhen: null, conditions: []
       },
-      {
-        id: "gr-guide", label: "Guide Channel", materialCategory: "Guide Channel",
-        defaultVariant: "GC", formula: "2",
-        descriptionFormat: "{height} × 2 {variant}", unit: "Ft", exportVar: "", resultVar: "",
-        displayOrder: 4, editable: true, includeWhen: null,
-        conditions: [
-          { field: "width", operator: ">", value: "200", setVariant: "GC (4\")" },
-          { field: "width", operator: ">", value: "156", setVariant: "GC (3\" 14G)" }
-        ]
-      },
+      guideChannelGearStyleRule("gr-guide", 4),
       springRule("gr-spring", 5),
-      {
-        id: "gr-br", label: "BR", materialCategory: "BR",
-        defaultVariant: "13/16 (MS)", formula: "2",
-        descriptionFormat: "BRACKET {variant}", unit: "Pcs", exportVar: "", resultVar: "",
-        displayOrder: 6, editable: true, includeWhen: null,
-        conditions: [
-          { field: "height", operator: ">", value: "132", setVariant: "15 (MS)" },
-          { field: "height", operator: ">", value: "110", setVariant: "14/17 (MS)" }
-        ]
-      },
-      {
-        id: "gr-ucup", label: "U Cup", materialCategory: "U Cup",
-        defaultVariant: "UCUP (M)", formula: "2",
-        descriptionFormat: "{variant}", unit: "Pcs", exportVar: "", resultVar: "",
-        displayOrder: 7, editable: true, includeWhen: null, conditions: []
-      },
-      {
-        id: "gr-lock", label: "Lock Set", materialCategory: "Lock Set",
-        defaultVariant: "Standard", formula: "1",
-        descriptionFormat: "LOCK SET", unit: "Set", exportVar: "", resultVar: "",
-        displayOrder: 8, editable: true, includeWhen: null, conditions: []
-      },
-      {
-        id: "gr-wheel", label: "Wheel", materialCategory: "Wheel",
-        defaultVariant: "7\"", formula: "spring + 2",
-        descriptionFormat: "WHEEL {wheelSize} ({pipeSize}) - {quantity} PCS", unit: "Pcs",
-        exportVar: "wheelSize", resultVar: "", displayOrder: 9, editable: true,
-        includeWhen: null, conditions: []
-      },
+      bracketBRRule("gr-br", 6),
+      uCupRule("gr-ucup", 7),
+      lockSetRule("gr-lock", 8),
+      wheelGearStyleRule("gr-wheel", 9),
       {
         id: "gr-ring", label: "Ring", materialCategory: "Ring",
         defaultVariant: "Standard Ring", formula: "wheel + 2",
@@ -2019,18 +2066,8 @@ const seedQuotationTemplates = [
         unit: "Pcs", exportVar: "", resultVar: "", displayOrder: 11, editable: true,
         includeWhen: null, conditions: []
       },
-      {
-        id: "gr-handle", label: "Handle", materialCategory: "Handles",
-        defaultVariant: "MS", formula: "2",
-        descriptionFormat: "HANDLE", unit: "Pcs", exportVar: "", resultVar: "",
-        displayOrder: 12, editable: true, includeWhen: null, conditions: []
-      },
-      {
-        id: "gr-fittings", label: "Fittings", materialCategory: "Fittings",
-        defaultVariant: "Basic", formula: "1",
-        descriptionFormat: "FITTINGS", unit: "Pcs", exportVar: "", resultVar: "",
-        displayOrder: 13, editable: true, includeWhen: null, conditions: []
-      },
+      handleGearStyleRule("gr-handle", 12),
+      fittingsGearStyleRule("gr-fittings", 13),
       {
         id: "gr-gearset", label: "Gear Set", materialCategory: "Gear Set",
         defaultVariant: "Standard Gear Set", formula: "1",
@@ -2042,8 +2079,42 @@ const seedQuotationTemplates = [
   },
   {
     name: "Motorized Shutter",
-    description: "Motor-operated rolling shutter. Configure rules for this shutter type.",
-    active: true, displayOrder: 3, version: 1, rules: []
+    description: "Motor-operated rolling shutter. Reuses Gear Shutter's GI Sheet, Guide Channel, Spring, Bracket, U Cup, Lock Set, Wheel, Handle, Fittings and Top Cover logic; adds its own motor-pipe, sheet-driven Kabadi and Motor rules.",
+    active: true, displayOrder: 3, version: 1,
+    rules: [
+      giSheetGearStyleRule("mo-gi", 1),
+      bottomPlateRule("mo-bp", 2),
+      {
+        id: "mo-pipe", label: "Pipe", materialCategory: "Motor Pipe",
+        defaultVariant: "6\"", formula: "width + 10",
+        descriptionFormat: "{pipeLength} × PIPE ({pipeSize})", unit: "Ft",
+        exportVar: "pipeSize", resultVar: "pipeLength", displayOrder: 3, editable: true,
+        includeWhen: null, conditions: []
+      },
+      guideChannelGearStyleRule("mo-guide", 4),
+      springRule("mo-spring", 5),
+      bracketBRRule("mo-br", 6),
+      uCupRule("mo-ucup", 7),
+      lockSetRule("mo-lock", 8),
+      wheelGearStyleRule("mo-wheel", 9),
+      {
+        id: "mo-kabadi", label: "Kabadi", materialCategory: "Kabadi",
+        defaultVariant: "GI Flat", formula: "CEIL(gisheet / 12)",
+        descriptionFormat: "15\" × {quantity} KABADI ({material}-{thickness}-{profile})",
+        unit: "Pcs", exportVar: "", resultVar: "", displayOrder: 10, editable: true,
+        includeWhen: null, conditions: []
+      },
+      handleGearStyleRule("mo-handle", 11),
+      fittingsGearStyleRule("mo-fittings", 12),
+      {
+        id: "mo-motor", label: "Motor", materialCategory: "Motor",
+        defaultVariant: "800 KG", formula: "1",
+        descriptionFormat: "MOTOR {variant}", unit: "Pcs",
+        exportVar: "motorType", resultVar: "", displayOrder: 13, editable: true,
+        includeWhen: null, conditions: []
+      },
+      topCoverRule("mo-topcover", 14)
+    ]
   },
   {
     name: "Industrial Shutter",
