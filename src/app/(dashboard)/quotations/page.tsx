@@ -119,8 +119,8 @@ export default function QuotationsPage() {
   // Template + shutter spec (the only inputs the salesperson provides)
   const [quotationDate, setQuotationDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
-  const [specWidth, setSpecWidth] = useState("122");
-  const [specHeight, setSpecHeight] = useState("36");
+  const [specWidth, setSpecWidth] = useState("120");
+  const [specHeight, setSpecHeight] = useState("120");
   const [specMaterial, setSpecMaterial] = useState("");
   const [specThickness, setSpecThickness] = useState("");
   const [specProfile, setSpecProfile] = useState("");
@@ -1144,19 +1144,19 @@ export default function QuotationsPage() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="font-semibold text-foreground">Width *</label>
+                    <label className="font-semibold text-foreground">Width (Inches) *</label>
                     <input
                       type="number" step="any" min="0"
-                      value={specWidth}
+                      value={specWidth || 120}
                       onChange={(e) => setSpecWidth(e.target.value)}
                       className="w-full bg-secondary/35 border border-border rounded-xl px-3 py-2 text-xs text-foreground font-bold font-mono outline-none focus:border-primary"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-semibold text-foreground">Height *</label>
+                    <label className="font-semibold text-foreground">Height (Inches) *</label>
                     <input
                       type="number" step="any" min="0"
-                      value={specHeight}
+                      value={specHeight || 120}
                       onChange={(e) => setSpecHeight(e.target.value)}
                       className="w-full bg-secondary/35 border border-border rounded-xl px-3 py-2 text-xs text-foreground font-bold font-mono outline-none focus:border-primary"
                     />
