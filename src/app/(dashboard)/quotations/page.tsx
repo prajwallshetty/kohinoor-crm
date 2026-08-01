@@ -572,6 +572,7 @@ export default function QuotationsPage() {
   );
 
   const selectedTemplateObj = templates.find((t) => t.id === selectedTemplateId);
+  const isGate = selectedTemplateObj?.name?.toLowerCase() === "gate";
 
   if (loading) return <PageSkeleton rows={7} />;
 
@@ -1161,39 +1162,43 @@ export default function QuotationsPage() {
                       className="w-full bg-secondary/35 border border-border rounded-xl px-3 py-2 text-xs text-foreground font-bold font-mono outline-none focus:border-primary"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="font-semibold text-foreground">Material</label>
-                    <select
-                      value={specMaterial}
-                      onChange={(e) => setSpecMaterial(e.target.value)}
-                      className="w-full bg-secondary/35 border border-border rounded-xl px-3 py-2 text-xs text-foreground font-bold outline-none focus:border-primary cursor-pointer"
-                    >
-                      {materialOptions.length === 0 && <option value="">—</option>}
-                      {materialOptions.map((o) => <option key={o} value={o} className="bg-card">{o}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="font-semibold text-foreground">Thickness</label>
-                    <select
-                      value={specThickness}
-                      onChange={(e) => setSpecThickness(e.target.value)}
-                      className="w-full bg-secondary/35 border border-border rounded-xl px-3 py-2 text-xs text-foreground font-bold outline-none focus:border-primary cursor-pointer"
-                    >
-                      {thicknessOptions.length === 0 && <option value="">—</option>}
-                      {thicknessOptions.map((o) => <option key={o} value={o} className="bg-card">{o}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="font-semibold text-foreground">Profile</label>
-                    <select
-                      value={specProfile}
-                      onChange={(e) => setSpecProfile(e.target.value)}
-                      className="w-full bg-secondary/35 border border-border rounded-xl px-3 py-2 text-xs text-foreground font-bold outline-none focus:border-primary cursor-pointer"
-                    >
-                      {profileOptions.length === 0 && <option value="">—</option>}
-                      {profileOptions.map((o) => <option key={o} value={o} className="bg-card">{o}</option>)}
-                    </select>
-                  </div>
+                  {!isGate && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="font-semibold text-foreground">Material</label>
+                        <select
+                          value={specMaterial}
+                          onChange={(e) => setSpecMaterial(e.target.value)}
+                          className="w-full bg-secondary/35 border border-border rounded-xl px-3 py-2 text-xs text-foreground font-bold outline-none focus:border-primary cursor-pointer"
+                        >
+                          {materialOptions.length === 0 && <option value="">—</option>}
+                          {materialOptions.map((o) => <option key={o} value={o} className="bg-card">{o}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-semibold text-foreground">Thickness</label>
+                        <select
+                          value={specThickness}
+                          onChange={(e) => setSpecThickness(e.target.value)}
+                          className="w-full bg-secondary/35 border border-border rounded-xl px-3 py-2 text-xs text-foreground font-bold outline-none focus:border-primary cursor-pointer"
+                        >
+                          {thicknessOptions.length === 0 && <option value="">—</option>}
+                          {thicknessOptions.map((o) => <option key={o} value={o} className="bg-card">{o}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-semibold text-foreground">Profile</label>
+                        <select
+                          value={specProfile}
+                          onChange={(e) => setSpecProfile(e.target.value)}
+                          className="w-full bg-secondary/35 border border-border rounded-xl px-3 py-2 text-xs text-foreground font-bold outline-none focus:border-primary cursor-pointer"
+                        >
+                          {profileOptions.length === 0 && <option value="">—</option>}
+                          {profileOptions.map((o) => <option key={o} value={o} className="bg-card">{o}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-1">
                     <label className="font-semibold text-foreground">Quantity</label>
                     <input

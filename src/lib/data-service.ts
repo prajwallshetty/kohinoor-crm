@@ -1364,6 +1364,16 @@ export const DataService = {
         const count = await prisma.masterItem.count();
         if (count === 0) {
           await prisma.masterItem.createMany({ data: seedMasterItems });
+        } else {
+          const exists = await prisma.masterItem.findFirst({ where: { category: "Gate Material", name: "Standard Gate" } });
+          if (!exists) {
+            await prisma.masterItem.createMany({
+              data: [
+                { category: "Material Categories", name: "Gate Material", rate: 0.0, unit: "Pcs", isDisabled: false },
+                { category: "Gate Material", name: "Standard Gate", rate: 150.0, unit: "Sft", isDisabled: false }
+              ]
+            });
+          }
         }
         return await prisma.masterItem.findMany({ orderBy: { category: "asc" } });
       } catch (e) {}
@@ -1372,6 +1382,33 @@ export const DataService = {
     if (!db.masterItems) {
       db.masterItems = [...seedMasterItems.map((item, idx) => ({ id: `mi-${idx}`, ...item, isDisabled: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }))];
       writeMockDb(db);
+    } else {
+      const exists = db.masterItems.find((mi: any) => mi.category === "Gate Material" && mi.name === "Standard Gate");
+      if (!exists) {
+        db.masterItems.push(
+          {
+            id: `mi-gm-${Date.now()}`,
+            category: "Material Categories",
+            name: "Gate Material",
+            rate: 0.0,
+            unit: "Pcs",
+            isDisabled: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: `mi-sg-${Date.now()}`,
+            category: "Gate Material",
+            name: "Standard Gate",
+            rate: 150.0,
+            unit: "Sft",
+            isDisabled: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        );
+        writeMockDb(db);
+      }
     }
     return db.masterItems;
   },
@@ -1475,6 +1512,23 @@ export const DataService = {
               }
             });
           }
+        } else {
+          const exists = await (prisma as any).quotationTemplate.findFirst({ where: { name: "Gate" } });
+          if (!exists) {
+            const tpl = seedQuotationTemplates.find((t) => t.name === "Gate");
+            if (tpl) {
+              await (prisma as any).quotationTemplate.create({
+                data: {
+                  name: tpl.name,
+                  description: tpl.description,
+                  active: tpl.active,
+                  displayOrder: tpl.displayOrder,
+                  version: tpl.version,
+                  rulesJson: JSON.stringify(tpl.rules)
+                }
+              });
+            }
+          }
         }
         const rows = await (prisma as any).quotationTemplate.findMany({ orderBy: { displayOrder: "asc" } });
         return rows.map((r: any) => ({ ...r, rules: safeParse(r.rulesJson, []) }));
@@ -1491,6 +1545,18 @@ export const DataService = {
       writeMockDb(db);
     }
     const list = db.quotationTemplates || [];
+    if (!list.find((t: any) => t.name === "Gate")) {
+      const gateSeed = seedQuotationTemplates.find((t) => t.name === "Gate");
+      if (gateSeed) {
+        db.quotationTemplates.push({
+          id: `qt-${list.length + 1}`,
+          ...gateSeed,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        writeMockDb(db);
+      }
+    }
     return [...list].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
   },
 
@@ -1621,6 +1687,7 @@ const seedMasterItems = [
   { category: "Material Categories", name: "Locks", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Motor", rate: 0.0, unit: "Pcs" },
   { category: "Material Categories", name: "Fittings", rate: 0.0, unit: "Pcs" },
+  { category: "Material Categories", name: "Gate Material", rate: 0.0, unit: "Pcs" },
 
   // 2. Material Types
   { category: "Material Types", name: "GI", rate: 85.0, unit: "Sft" },
@@ -1834,7 +1901,10 @@ const seedMasterItems = [
 
   { category: "Fields: Fittings", name: "Fittings Type|dropdown|Fittings", rate: 0.0, unit: "Pcs" },
   { category: "Fields: Fittings", name: "Quantity|number", rate: 0.0, unit: "Pcs" },
-  { category: "Fields: Fittings", name: "Rate|currency", rate: 0.0, unit: "Pcs" }
+  { category: "Fields: Fittings", name: "Rate|currency", rate: 0.0, unit: "Pcs" },
+
+  // Gate Material
+  { category: "Gate Material", name: "Standard Gate", rate: 150.0, unit: "Sft" }
 ];
 
 // ---------------------------------------------------------------------------
@@ -2120,6 +2190,20 @@ const seedQuotationTemplates = [
     name: "Industrial Shutter",
     description: "Heavy industrial rolling shutter. Configure rules for this shutter type.",
     active: true, displayOrder: 4, version: 1, rules: []
+  },
+  {
+    name: "Gate",
+    description: "Standard Gate template. Calculates fabrication cost based on width and height.",
+    active: true, displayOrder: 5, version: 1,
+    rules: [
+      {
+        id: "gt-fab", label: "Gate Fabrication", materialCategory: "Gate Material",
+        defaultVariant: "Standard Gate", formula: "ROUND((width * height) / 144, 2)",
+        descriptionFormat: "{width} × {height} Gate Structure Fabrication",
+        unit: "Sft", exportVar: "", resultVar: "", displayOrder: 1, editable: true,
+        includeWhen: null, conditions: []
+      }
+    ]
   }
 ];
 
