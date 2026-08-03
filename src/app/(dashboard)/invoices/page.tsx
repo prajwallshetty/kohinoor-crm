@@ -123,8 +123,8 @@ function numberToWordsINR(amount: number): string {
 
 // Expand shutter into individual traditional rolling shutter material items
 function expandShutterToBOMMaterials(shutter: any): InvoiceMaterialItem[] {
-  const width = parseFloat(shutter.width || 10);
-  const height = parseFloat(shutter.height || 8);
+  const width = (parseFloat(shutter.width) || 120) / 12;
+  const height = (parseFloat(shutter.height) || 96) / 12;
   const qty = parseInt(shutter.quantity || 1);
   const area = width * height;
   const mat = shutter.material || "GI";
@@ -399,7 +399,7 @@ export default function InvoicesPage() {
             allMaterials = [...allMaterials, ...expanded];
           });
         } else {
-          allMaterials = expandShutterToBOMMaterials({ width: 10, height: 8, quantity: 1, unitPrice: 18000 });
+          allMaterials = expandShutterToBOMMaterials({ width: 120, height: 96, quantity: 1, unitPrice: 18000 });
         }
 
         // Re-index Sl No
@@ -587,7 +587,7 @@ export default function InvoicesPage() {
         list = [...list, ...expandShutterToBOMMaterials(shutter)];
       });
     } else {
-      list = expandShutterToBOMMaterials({ width: 10, height: 8, quantity: 1, unitPrice: selectedInvoice.totalAmount / 1.18 });
+      list = expandShutterToBOMMaterials({ width: 120, height: 96, quantity: 1, unitPrice: selectedInvoice.totalAmount / 1.18 });
     }
     return list.map((it, idx) => ({ ...it, slNo: idx + 1 }));
   })();
