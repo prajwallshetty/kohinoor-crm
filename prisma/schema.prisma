@@ -249,17 +249,18 @@ model AuditLog {
 }
 
 model CompanyBranding {
-  id             String   @id @default(uuid())
-  companyName    String   @default("Kohinoor Shutters")
-  logoUrl        String?
-  gstNumber      String?
-  bankName       String?
-  bankAccountNo  String?
-  bankIfsc       String?
-  invoiceTerms   String?
-  quotationTerms String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  companyName        String   @default("Kohinoor Shutters")
+  logoUrl            String?
+  gstNumber          String?
+  bankName           String?
+  bankAccountNo      String?
+  bankIfsc           String?
+  invoiceTerms       String?
+  quotationTerms     String?
+  isMasterDataLocked Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model StorageQuota {

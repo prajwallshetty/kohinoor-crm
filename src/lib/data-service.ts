@@ -71,7 +71,8 @@ const initialMockData: MockDataSchema = {
     bankAccountNo: "38927103829",
     bankIfsc: "SBIN0004561",
     invoiceTerms: "1. Goods once sold will not be taken back.\n2. Interest @ 18% will be charged if payment is not made within due date.\n3. Warranty claims must represent valid manufacturing defects.",
-    quotationTerms: "1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client."
+    quotationTerms: "1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client.",
+    isMasterDataLocked: false
   },
   storageQuota: {
     id: "sq-1",
@@ -1414,6 +1415,11 @@ export const DataService = {
   },
 
   async addMasterItem(item: any) {
+    const branding = await this.getCompanyBranding();
+    if (branding?.isMasterDataLocked) {
+      throw new Error("Master data is locked. Please unlock it before making changes.");
+    }
+
     if (isDbConnected) {
       try {
         return await prisma.masterItem.create({
@@ -1445,6 +1451,11 @@ export const DataService = {
   },
 
   async updateMasterItem(id: string, updates: any) {
+    const branding = await this.getCompanyBranding();
+    if (branding?.isMasterDataLocked) {
+      throw new Error("Master data is locked. Please unlock it before making changes.");
+    }
+
     if (isDbConnected) {
       try {
         const cleanUpdates: any = {};
@@ -1478,6 +1489,11 @@ export const DataService = {
   },
 
   async deleteMasterItem(id: string) {
+    const branding = await this.getCompanyBranding();
+    if (branding?.isMasterDataLocked) {
+      throw new Error("Master data is locked. Please unlock it before making changes.");
+    }
+
     if (isDbConnected) {
       try {
         await prisma.masterItem.delete({ where: { id } });

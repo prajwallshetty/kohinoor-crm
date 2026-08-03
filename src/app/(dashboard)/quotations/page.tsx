@@ -95,6 +95,8 @@ export default function QuotationsPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedQuote, setSelectedQuote] = useState<Quotation | null>(null);
+  const [printType, setPrintType] = useState<"normal" | "bold_gaps" | "spring_handle">("normal");
+  const [printItems, setPrintItems] = useState<any[]>([]);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
 
   // Create Flow State
@@ -188,6 +190,18 @@ export default function QuotationsPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (selectedQuote) {
+      setPrintItems(selectedQuote.items || []);
+    } else {
+      setPrintItems([]);
+    }
+  }, [selectedQuote]);
+
+  const handleRemovePrintItem = (itemToRemove: any) => {
+    setPrintItems((prev) => prev.filter((item) => item !== itemToRemove));
+  };
 
   // Helper to extract dropdown options from Master Data
   const getMasterOptions = (categoryNames: string[]): SelectOption[] => {
@@ -672,6 +686,75 @@ export default function QuotationsPage() {
     ? newCustName || "Client Name"
     : activeCustomerObj?.name || "Select Customer";
 
+  const displayedItems = React.useMemo(() => {
+    if (!printItems) return [];
+
+    if (printType === "spring_handle") {
+      return printItems.filter((item: any) => {
+        const cat = (item.materialCategory || "").toLowerCase();
+        const prod = (item.productName || "").toLowerCase();
+        const rule = (item.ruleId || "").toLowerCase();
+
+        const isSpring = cat.includes("spring") || prod.includes("spring") || rule.includes("spring");
+        const isBracket = cat.includes("bracket") || prod.includes("bracket") || rule.includes("bracket");
+        const isWheel = cat.includes("wheel") || prod.includes("wheel") || rule.includes("wheel");
+        const isLock = cat.includes("lock") || prod.includes("lock") || rule.includes("lock");
+        const isHandle = cat.includes("handle") || prod.includes("handle") || rule.includes("handle");
+
+        return isSpring || isBracket || isWheel || isLock || isHandle;
+      });
+    }
+
+    return printItems;
+  }, [printItems, printType]);
+
+  const groupedFormattedItems = React.useMemo(() => {
+    if (!printItems || printType !== "bold_gaps") return null;
+
+    const isBold = (item: any) => {
+      const cat = (item.materialCategory || "").toLowerCase();
+      const prod = (item.productName || "").toLowerCase();
+      const rule = (item.ruleId || "").toLowerCase();
+      
+      return cat.includes("material") || cat.includes("pipe") || cat.includes("guide") ||
+             prod.includes("slat") || prod.includes("sheet") || prod.includes("pipe") || prod.includes("guide") ||
+             rule.includes("sheet") || rule.includes("pipe") || rule.includes("guide");
+    };
+
+    const isEnd = (item: any) => {
+      const cat = (item.materialCategory || "").toLowerCase();
+      const prod = (item.productName || "").toLowerCase();
+      const rule = (item.ruleId || "").toLowerCase();
+      
+      return cat.includes("handle") || cat.includes("top cap") || cat.includes("cover") ||
+             prod.includes("handle") || prod.includes("top cover") ||
+             rule.includes("handle") || rule.includes("topcover");
+    };
+
+    const boldItems = printItems.filter(isBold);
+    const endItems = printItems.filter(isEnd);
+    const middleItems = printItems.filter((item: any) => !isBold(item) && !isEnd(item));
+
+    return { boldItems, middleItems, endItems };
+  }, [printItems, printType]);
+
+  const printedSubtotal = React.useMemo(() => {
+    return displayedItems.reduce((s, i) => s + (i.lineTotal || 0), 0);
+  }, [displayedItems]);
+
+  const printedGstAmount = React.useMemo(() => {
+    if (!selectedQuote) return 0;
+    const rate = selectedQuote.gstRate || 0;
+    return Math.round(printedSubtotal * (rate / 100));
+  }, [selectedQuote, printedSubtotal]);
+
+  const printedTotalAmount = React.useMemo(() => {
+    if (!selectedQuote) return 0;
+    const discount = selectedQuote.discount || 0;
+    const base = Math.max(0, printedSubtotal - discount);
+    return Math.round(base + printedGstAmount);
+  }, [selectedQuote, printedSubtotal, printedGstAmount]);
+
   return (
     <div className="space-y-6 pb-12 font-sans">
       {/* Toast Notification */}
@@ -1050,22 +1133,56 @@ export default function QuotationsPage() {
       ) : selectedQuote ? (
         /* SAVED QUOTATION VIEW & PRINT (HALF A4 A5) */
         <div className="space-y-6">
-          <div className="flex justify-between items-center bg-card/60 border border-border/80 p-4 rounded-xl print-hidden print:!hidden">
+          <div className="flex justify-between items-center bg-card/60 border border-border/80 p-5 rounded-2xl print-hidden print:!hidden gap-4">
             <button
               onClick={() => setSelectedQuote(null)}
-              className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Quotations List</span>
+              <ArrowLeft className="w-5 h-5 text-primary" />
+              <span>Back to List</span>
             </button>
 
-            <div className="flex items-center gap-2">
+            {/* Print Type Selector */}
+            <div className="flex bg-secondary/60 p-1.5 border border-border/80 rounded-2xl text-sm font-sans">
+              <button
+                onClick={() => setPrintType("normal")}
+                className={`px-5 py-2.5 rounded-xl transition-all font-black text-xs uppercase tracking-wider ${
+                  printType === "normal"
+                    ? "bg-primary text-primary-foreground shadow-md animate-in fade-in duration-100"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Normal
+              </button>
+              <button
+                onClick={() => setPrintType("bold_gaps")}
+                className={`px-5 py-2.5 rounded-xl transition-all font-black text-xs uppercase tracking-wider ${
+                  printType === "bold_gaps"
+                    ? "bg-primary text-primary-foreground shadow-md animate-in fade-in duration-100"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Bold & Gaps
+              </button>
+              <button
+                onClick={() => setPrintType("spring_handle")}
+                className={`px-5 py-2.5 rounded-xl transition-all font-black text-xs uppercase tracking-wider ${
+                  printType === "spring_handle"
+                    ? "bg-primary text-primary-foreground shadow-md animate-in fade-in duration-100"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Spring to Handle
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={handlePrintQuotation}
-                className="bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-bold py-1.5 px-3.5 rounded-lg flex items-center gap-1.5 shadow-md cursor-pointer"
+                className="bg-primary text-primary-foreground hover:bg-primary/95 text-sm font-black py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-lg cursor-pointer uppercase tracking-wider"
               >
-                <Printer className="w-4 h-4" />
-                <span>Print Half A4 (A5)</span>
+                <Printer className="w-5 h-5" />
+                <span>Print Quotation</span>
               </button>
             </div>
           </div>
@@ -1108,21 +1225,214 @@ export default function QuotationsPage() {
                   <th className="py-1 text-center">Qty</th>
                   <th className="py-1 text-right">Rate</th>
                   <th className="py-1 text-right">Amount</th>
+                  <th className="py-1 text-center print-hidden print:!hidden w-10">Act</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {selectedQuote.items?.map((item, idx) => (
-                  <tr key={idx} className="text-[10px]">
-                    <td className="py-1 text-slate-500">{idx + 1}</td>
-                    <td className="py-1">
-                      <span className="font-bold text-slate-950 block">{item.productName}</span>
-                      <span className="text-[9px] text-slate-600 block">{item.shutterName || item.material}</span>
-                    </td>
-                    <td className="py-1 text-center text-slate-800">{item.quantity} {item.unit || "PCS"}</td>
-                    <td className="py-1 text-right text-slate-800">₹{item.unitPrice}</td>
-                    <td className="py-1 text-right font-bold text-slate-950">₹{item.lineTotal.toLocaleString("en-IN")}</td>
-                  </tr>
-                ))}
+                {printType === "bold_gaps" ? (
+                  <>
+                    {/* Bold Group */}
+                    {groupedFormattedItems?.boldItems.map((item: any, idx: number) => (
+                      <tr key={`bold-${idx}`} className="text-[10px] font-black text-slate-950">
+                        <td className="py-1 text-slate-500 font-bold">{idx + 1}</td>
+                        <td className="py-1">
+                          <span className="font-extrabold text-slate-950 block">{item.productName}</span>
+                          <span className="text-[9px] text-slate-900 font-bold block">{item.shutterName || item.material}</span>
+                        </td>
+                        <td className="py-1 text-center font-bold">{item.quantity} {item.unit || "PCS"}</td>
+                        <td className="py-1 text-right font-bold">₹{item.unitPrice}</td>
+                        <td className="py-1 text-right font-black">₹{item.lineTotal.toLocaleString("en-IN")}</td>
+                        <td className="py-1 text-center print-hidden print:!hidden">
+                          <button
+                            onClick={() => handleRemovePrintItem(item)}
+                            className="text-rose-600 hover:text-rose-800 font-black text-xs px-1 cursor-pointer"
+                            title="Remove from printout"
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    
+                    {/* Gap 1 */}
+                    <tr className="h-4 border-none"><td colSpan={6} className="py-1 border-none"></td></tr>
+
+                    {/* Middle Group */}
+                    {groupedFormattedItems?.middleItems.map((item: any, idx: number) => {
+                      const startIdx = (groupedFormattedItems?.boldItems.length || 0) + idx + 1;
+                      return (
+                        <tr key={`mid-${idx}`} className="text-[10px]">
+                          <td className="py-1 text-slate-500">{startIdx}</td>
+                          <td className="py-1">
+                            <span className="font-bold text-slate-950 block">{item.productName}</span>
+                            <span className="text-[9px] text-slate-600 block">{item.shutterName || item.material}</span>
+                          </td>
+                          <td className="py-1 text-center text-slate-800">{item.quantity} {item.unit || "PCS"}</td>
+                          <td className="py-1 text-right text-slate-800">₹{item.unitPrice}</td>
+                          <td className="py-1 text-right font-bold text-slate-955">₹{item.lineTotal.toLocaleString("en-IN")}</td>
+                          <td className="py-1 text-center print-hidden print:!hidden">
+                            <button
+                              onClick={() => handleRemovePrintItem(item)}
+                              className="text-rose-600 hover:text-rose-800 font-black text-xs px-1 cursor-pointer"
+                              title="Remove from printout"
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    
+                    {/* Gap 2 */}
+                    <tr className="h-4 border-none"><td colSpan={6} className="py-1 border-none"></td></tr>
+
+                    {/* End Group */}
+                    {groupedFormattedItems?.endItems.map((item: any, idx: number) => {
+                      const startIdx = (groupedFormattedItems?.boldItems.length || 0) + (groupedFormattedItems?.middleItems.length || 0) + idx + 1;
+                      return (
+                        <tr key={`end-${idx}`} className="text-[10px]">
+                          <td className="py-1 text-slate-500">{startIdx}</td>
+                          <td className="py-1">
+                            <span className="font-bold text-slate-955 block">{item.productName}</span>
+                            <span className="text-[9px] text-slate-600 block">{item.shutterName || item.material}</span>
+                          </td>
+                          <td className="py-1 text-center text-slate-800">{item.quantity} {item.unit || "PCS"}</td>
+                          <td className="py-1 text-right text-slate-800">₹{item.unitPrice}</td>
+                          <td className="py-1 text-right font-bold text-slate-955">₹{item.lineTotal.toLocaleString("en-IN")}</td>
+                          <td className="py-1 text-center print-hidden print:!hidden">
+                            <button
+                              onClick={() => handleRemovePrintItem(item)}
+                              className="text-rose-600 hover:text-rose-800 font-black text-xs px-1 cursor-pointer"
+                              title="Remove from printout"
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                ) : (
+                  displayedItems.map((item: any, idx: number) => (
+                    <tr key={idx} className="text-[10px]">
+                      <td className="py-1 text-slate-500">{idx + 1}</td>
+                      <td className="py-1">
+                        <span className="font-bold text-slate-955 block">{item.productName}</span>
+                        <span className="text-[9px] text-slate-600 block">{item.shutterName || item.material}</span>
+                      </td>
+                      <td className="py-1 text-center text-slate-800">{item.quantity} {item.unit || "PCS"}</td>
+                      <td className="py-1 text-right text-slate-800">₹{item.unitPrice}</td>
+                      <td className="py-1 text-right font-bold text-slate-955">₹{item.lineTotal.toLocaleString("en-IN")}</td>
+                      <td className="py-1 text-center print-hidden print:!hidden">
+                        <button
+                          onClick={() => handleRemovePrintItem(item)}
+                          className="text-rose-600 hover:text-rose-800 font-black text-xs px-1 cursor-pointer"
+                          title="Remove from printout"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+
+                {/* Add Custom Item Row - Screen Only */}
+                <tr className="print-hidden print:!hidden bg-slate-50 text-[10px]">
+                  <td className="py-2 text-slate-400 text-center font-bold">+</td>
+                  <td className="py-2">
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="Custom Item Name..."
+                        id="custom-item-name"
+                        className="border border-slate-300 rounded-lg px-2 py-1 text-[10px] w-full max-w-[170px] outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Details..."
+                        id="custom-item-mat"
+                        className="border border-slate-300 rounded-lg px-2 py-1 text-[9px] w-full max-w-[90px] outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
+                      />
+                    </div>
+                  </td>
+                  <td className="py-2 text-center">
+                    <div className="flex items-center gap-1 justify-center">
+                      <input
+                        type="number"
+                        placeholder="Qty"
+                        id="custom-item-qty"
+                        defaultValue="1"
+                        className="border border-slate-300 rounded-lg px-1.5 py-1 text-[10px] w-12 text-center outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
+                      />
+                      <select
+                        id="custom-item-unit"
+                        defaultValue="Pcs"
+                        className="border border-slate-300 rounded-lg px-1.5 py-1 text-[10px] outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
+                      >
+                        <option value="Pcs">Pcs</option>
+                        <option value="Sft">Sft</option>
+                        <option value="Ft">Ft</option>
+                        <option value="Set">Set</option>
+                      </select>
+                    </div>
+                  </td>
+                  <td className="py-2 text-right">
+                    <input
+                      type="number"
+                      placeholder="Rate"
+                      id="custom-item-rate"
+                      defaultValue="0"
+                      className="border border-slate-300 rounded-lg px-2 py-1 text-[10px] w-16 text-right outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
+                    />
+                  </td>
+                  <td className="py-2 text-right text-slate-400 font-bold">—</td>
+                  <td className="py-2 text-center">
+                    <button
+                      onClick={() => {
+                        const nameEl = document.getElementById("custom-item-name") as HTMLInputElement;
+                        const matEl = document.getElementById("custom-item-mat") as HTMLInputElement;
+                        const qtyEl = document.getElementById("custom-item-qty") as HTMLInputElement;
+                        const unitEl = document.getElementById("custom-item-unit") as HTMLSelectElement;
+                        const rateEl = document.getElementById("custom-item-rate") as HTMLInputElement;
+                        
+                        if (!nameEl || !nameEl.value.trim()) {
+                          alert("Please enter a product name");
+                          return;
+                        }
+                        
+                        const name = nameEl.value.trim();
+                        const mat = matEl ? matEl.value.trim() : "";
+                        const qty = parseFloat(qtyEl.value) || 1;
+                        const unit = unitEl.value;
+                        const rate = parseFloat(rateEl.value) || 0;
+                        const amount = Math.round(qty * rate);
+                        
+                        const newItem = {
+                          ruleId: "custom-" + Date.now(),
+                          productName: name,
+                          materialCategory: "Custom",
+                          variant: mat,
+                          quantity: qty,
+                          unit: unit,
+                          unitPrice: rate,
+                          lineTotal: amount,
+                          description: `${name} ${mat ? `(${mat})` : ""}`,
+                        };
+                        
+                        setPrintItems((prev) => [...prev, newItem]);
+                        
+                        // Reset inputs
+                        nameEl.value = "";
+                        if (matEl) matEl.value = "";
+                        qtyEl.value = "1";
+                        rateEl.value = "0";
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] px-2.5 py-1.5 rounded-lg transition-all cursor-pointer uppercase tracking-wider"
+                    >
+                      Add
+                    </button>
+                  </td>
+                </tr>
               </tbody>
             </table>
 
@@ -1130,7 +1440,7 @@ export default function QuotationsPage() {
               <div className="w-48 text-[10px] space-y-1 text-right">
                 <div className="flex justify-between">
                   <span className="text-slate-600">Subtotal:</span>
-                  <span className="font-bold">₹{selectedQuote.items?.reduce((s, i) => s + i.lineTotal, 0).toLocaleString("en-IN")}</span>
+                  <span className="font-bold">₹{printedSubtotal.toLocaleString("en-IN")}</span>
                 </div>
                 {selectedQuote.discount > 0 && (
                   <div className="flex justify-between text-rose-600">
@@ -1138,15 +1448,15 @@ export default function QuotationsPage() {
                     <span>-₹{selectedQuote.discount.toLocaleString("en-IN")}</span>
                   </div>
                 )}
-                {selectedQuote.gstAmount > 0 && (
+                {printedGstAmount > 0 && (
                   <div className="flex justify-between">
                     <span>GST ({selectedQuote.gstRate}%):</span>
-                    <span>₹{selectedQuote.gstAmount.toLocaleString("en-IN")}</span>
+                    <span>₹{printedGstAmount.toLocaleString("en-IN")}</span>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-slate-900 pt-1 font-black text-xs text-slate-950">
+                <div className="flex justify-between border-t border-slate-900 pt-1 font-black text-xs text-slate-955">
                   <span>Total:</span>
-                  <span>₹{selectedQuote.totalAmount.toLocaleString("en-IN")}</span>
+                  <span>₹{printedTotalAmount.toLocaleString("en-IN")}</span>
                 </div>
               </div>
             </div>

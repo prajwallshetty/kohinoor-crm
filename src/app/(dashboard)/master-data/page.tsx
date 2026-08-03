@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { 
   Database, Plus, Search, Trash2, Edit, Check, X, ToggleLeft, ToggleRight, Loader2,
-  Package, Sliders, Layers, Info, Filter, ArrowUpRight, Sparkles
+  Package, Sliders, Layers, Info, Filter, ArrowUpRight, Sparkles, Lock, Unlock
 } from "lucide-react";
 
 interface MasterItem {
@@ -63,6 +63,7 @@ export default function MasterDataPage() {
 
   // Notification state
   const [notification, setNotification] = useState("");
+  const [isLocked, setIsLocked] = useState(false);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -75,9 +76,44 @@ export default function MasterDataPage() {
     setLoading(false);
   };
 
+  const fetchLockStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/branding");
+      if (res.ok) {
+        const data = await res.json();
+        setIsLocked(data.isMasterDataLocked || false);
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
     fetchItems();
+    fetchLockStatus();
   }, []);
+
+  const handleToggleLock = async () => {
+    const nextLockState = !isLocked;
+    if (!confirm(`Are you sure you want to ${nextLockState ? "LOCK" : "UNLOCK"} master data editing?\n\nThis will prevent any addition, modification, or deletion of specifications, rates, and units.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/branding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isMasterDataLocked: nextLockState })
+      });
+
+      if (res.ok) {
+        setIsLocked(nextLockState);
+        triggerNotification(`Master data has been ${nextLockState ? "locked" : "unlocked"} successfully.`);
+      } else {
+        alert("Failed to update lock status");
+      }
+    } catch (e) {
+      alert("Error updating lock status");
+    }
+  };
 
   // Dynamically collect all unique categories from items database
   const allCategories = Array.from(
@@ -112,6 +148,10 @@ export default function MasterDataPage() {
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) {
+      alert("Master data is locked.");
+      return;
+    }
     if (!newName.trim()) {
       alert("Specification name is required.");
       return;
@@ -148,6 +188,10 @@ export default function MasterDataPage() {
   };
 
   const handleToggleStatus = async (item: MasterItem) => {
+    if (isLocked) {
+      alert("Master data is locked.");
+      return;
+    }
     try {
       const res = await fetch(`/api/master-data/${item.id}`, {
         method: "PATCH",
@@ -163,6 +207,10 @@ export default function MasterDataPage() {
   };
 
   const handleStartEdit = (item: MasterItem) => {
+    if (isLocked) {
+      alert("Master data is locked.");
+      return;
+    }
     setEditingId(item.id);
     setEditName(item.name);
     setEditRate(item.rate.toString());
@@ -170,6 +218,10 @@ export default function MasterDataPage() {
   };
 
   const handleSaveEdit = async (id: string) => {
+    if (isLocked) {
+      alert("Master data is locked.");
+      return;
+    }
     if (!editName.trim()) {
       alert("Name cannot be empty");
       return;
@@ -194,6 +246,10 @@ export default function MasterDataPage() {
   };
 
   const handleDeleteItem = async (id: string) => {
+    if (isLocked) {
+      alert("Master data is locked.");
+      return;
+    }
     if (!confirm("Are you sure you want to delete this master item?")) return;
     try {
       const res = await fetch(`/api/master-data/${id}`, {
@@ -249,14 +305,41 @@ export default function MasterDataPage() {
           </div>
         </div>
 
-        <button
-          onClick={() => handleOpenAddModal(selectedCategory)}
-          className="bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-lg shadow-primary/25 cursor-pointer shrink-0 transition-all hover:scale-[1.01]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Master Item</span>
-        </button>
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={handleToggleLock}
+            className={`text-xs font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-lg cursor-pointer transition-all hover:scale-[1.01] ${
+              isLocked 
+                ? "bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/25" 
+                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/25"
+            }`}
+          >
+            {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+            <span>{isLocked ? "Unlock Console" : "Lock Console"}</span>
+          </button>
+          
+          <button
+            onClick={() => !isLocked && handleOpenAddModal(selectedCategory)}
+            disabled={isLocked}
+            className={`bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-lg shadow-primary/25 cursor-pointer shrink-0 transition-all hover:scale-[1.01] ${
+              isLocked ? "opacity-50 cursor-not-allowed hover:scale-100" : ""
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Master Item</span>
+          </button>
+        </div>
       </div>
+
+      {/* Lock Alert Banner */}
+      {isLocked && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl p-4 flex items-center gap-3 text-xs animate-in slide-in-from-top-4 duration-200">
+          <Lock className="w-5 h-5 shrink-0 text-amber-500" />
+          <div>
+            <span className="font-bold">Console Editing Locked:</span> Any changes to master data options, specifications, rates, and units are currently disabled. Unlock the console using the button above to enable edits.
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -423,8 +506,11 @@ export default function MasterDataPage() {
 
               <button
                 type="button"
-                onClick={() => handleOpenAddModal(selectedCategory)}
-                className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all"
+                onClick={() => !isLocked && handleOpenAddModal(selectedCategory)}
+                disabled={isLocked}
+                className={`bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all ${
+                  isLocked ? "opacity-50 cursor-not-allowed hover:bg-primary/10" : ""
+                }`}
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>New</span>
@@ -544,9 +630,12 @@ export default function MasterDataPage() {
                         {/* Status Column */}
                         <td className="p-3.5 text-center">
                           <button
-                            onClick={() => handleToggleStatus(item)}
-                            className="inline-flex cursor-pointer transition-transform hover:scale-105"
-                            title={item.isDisabled ? "Click to Enable" : "Click to Disable"}
+                            onClick={() => !isLocked && handleToggleStatus(item)}
+                            disabled={isLocked}
+                            className={`inline-flex transition-transform hover:scale-105 ${
+                              isLocked ? "cursor-not-allowed opacity-75 hover:scale-100" : "cursor-pointer"
+                            }`}
+                            title={isLocked ? "Console is Locked" : item.isDisabled ? "Click to Enable" : "Click to Disable"}
                           >
                             {item.isDisabled ? (
                               <div className="flex items-center gap-1.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
@@ -562,43 +651,50 @@ export default function MasterDataPage() {
 
                         {/* Actions Column */}
                         <td className="p-3.5 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  onClick={() => handleSaveEdit(item.id)}
-                                  className="text-emerald-400 hover:bg-emerald-500/10 p-1.5 rounded-lg border border-transparent hover:border-emerald-500/20 transition-colors cursor-pointer"
-                                  title="Save Changes"
-                                >
-                                  <Check className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => setEditingId(null)}
-                                  className="text-rose-400 hover:bg-rose-500/10 p-1.5 rounded-lg border border-transparent hover:border-rose-500/20 transition-colors cursor-pointer"
-                                  title="Cancel"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => handleStartEdit(item)}
-                                  className="text-sky-400 hover:bg-sky-500/10 p-1.5 rounded-lg border border-transparent hover:border-sky-500/20 transition-colors cursor-pointer"
-                                  title="Edit Item"
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteItem(item.id)}
-                                  className="text-rose-400 hover:bg-rose-500/10 p-1.5 rounded-lg border border-transparent hover:border-rose-500/20 transition-colors cursor-pointer"
-                                  title="Delete Item"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            )}
-                          </div>
+                          {isLocked ? (
+                            <span className="text-[10px] text-muted-foreground font-semibold flex items-center justify-center gap-1">
+                              <Lock className="w-3 h-3 text-amber-500" />
+                              Locked
+                            </span>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1.5">
+                              {isEditing ? (
+                                <>
+                                  <button
+                                    onClick={() => handleSaveEdit(item.id)}
+                                    className="text-emerald-400 hover:bg-emerald-500/10 p-1.5 rounded-lg border border-transparent hover:border-emerald-500/20 transition-colors cursor-pointer"
+                                    title="Save Changes"
+                                  >
+                                    <Check className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingId(null)}
+                                    className="text-rose-400 hover:bg-rose-500/10 p-1.5 rounded-lg border border-transparent hover:border-rose-500/20 transition-colors cursor-pointer"
+                                    title="Cancel"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleStartEdit(item)}
+                                    className="text-sky-400 hover:bg-sky-500/10 p-1.5 rounded-lg border border-transparent hover:border-sky-500/20 transition-colors cursor-pointer"
+                                    title="Edit Item"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteItem(item.id)}
+                                    className="text-rose-400 hover:bg-rose-500/10 p-1.5 rounded-lg border border-transparent hover:border-rose-500/20 transition-colors cursor-pointer"
+                                    title="Delete Item"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );

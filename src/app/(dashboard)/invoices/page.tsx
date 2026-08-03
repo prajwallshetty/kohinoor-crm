@@ -605,6 +605,7 @@ export default function InvoicesPage() {
   const grandTotal = selectedInvoice ? selectedInvoice.totalAmount : Math.round(calculatedGrandTotal);
   const roundOff = grandTotal - calculatedGrandTotal;
   const amountInWords = numberToWordsINR(grandTotal);
+  const totalQuantity = activeInvoiceMaterialItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   // Group items by HSN for HSN Tax Summary Table
   const hsnSummaryMap = new Map<string, { taxableValue: number; cgstAmount: number; sgstAmount: number; totalTax: number }>();
@@ -942,202 +943,330 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start print:block print:w-full print:m-0 print:p-0">
-            {/* TRADITIONAL GST TAX INVOICE PRINT CARD */}
-            <div className="lg:col-span-2 bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-xl border-2 border-slate-900 font-sans max-w-4xl mx-auto w-full printable-card tally-invoice-print">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start print:block print:w-full">
+            {/* TRADITIONAL GST TAX INVOICE PRINT CARD (TALLY STYLE) */}
+            <div className="lg:col-span-2 bg-white text-black p-5 rounded-none border-[1.5px] border-black font-sans max-w-4xl mx-auto w-full printable-card tally-invoice-print print:border-black print:p-4 print:shadow-none print:max-w-none print:w-full print:m-0 select-none">
               
-              {/* TOP HEADER: COMPANY DETAILS (Left) & INVOICE DETAILS (Right) */}
-              <div className="grid grid-cols-2 border-b-2 border-slate-900 pb-3 mb-3 gap-3">
-                {/* Top Left: Company Details */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="text-base font-black tracking-tight text-slate-950 uppercase">{branding?.companyName || "KOHINOOR ROLLING SHUTTERS"}</span>
-                      <span className="text-[9px] text-slate-600 font-mono tracking-widest uppercase font-bold">Rolling Shutter Manufacturers & Contractors</span>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-700 leading-tight">Plot 42, GIDC Industrial Estate, Thane West, Maharashtra - 400601</p>
-                  <p className="text-[10px] text-slate-700 leading-tight font-mono"><strong>GSTIN:</strong> {branding?.gstNumber || "27AAACK5912K1Z9"} | <strong>State:</strong> 27 - Maharashtra</p>
-                  <p className="text-[10px] text-slate-700 leading-tight font-mono"><strong>Email:</strong> billing@kohinoor.com | <strong>Phone:</strong> +91 98765 43210</p>
-                </div>
-
-                {/* Top Right: Invoice Details */}
-                <div className="flex flex-col justify-between items-end text-right border-l border-slate-200 pl-4">
-                  <div>
-                    <span className="text-2xl font-black tracking-wider text-slate-900 block uppercase">TAX INVOICE</span>
-                    <span className="text-xs font-mono font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-300">
-                      No: {selectedInvoice.invoiceNumber}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[9px] text-slate-700 text-left font-mono mt-2 bg-slate-50 p-2 border rounded border-slate-200 w-full">
-                    <div><strong>Invoice Date:</strong> {new Date(selectedInvoice.createdAt).toLocaleDateString("en-IN")}</div>
-                    <div><strong>Delivery Note:</strong> DN-2026-091</div>
-                    <div><strong>Ref. Quote:</strong> {selectedInvoice.quotation?.quoteNumber || "Direct"}</div>
-                    <div><strong>Buyer Order No:</strong> PO-9821-2026</div>
-                    <div><strong>Dispatch Details:</strong> Local Transport (MH-04-AZ-9912)</div>
-                    <div><strong>Terms of Delivery:</strong> Ex-Factory / Site</div>
-                  </div>
-                </div>
+              {/* Center Title */}
+              <div className="text-center font-bold border-b-[1.5px] border-black pb-1 mb-0 text-[11px] tracking-widest uppercase">
+                Tax Invoice
               </div>
 
-              {/* CUSTOMER DETAILS: BUYER & CONSIGNEE */}
-              <div className="grid grid-cols-2 gap-3 border border-slate-300 rounded p-2 mb-3 text-[9px] leading-snug bg-slate-50/50">
-                <div className="border-r border-slate-200 pr-3">
-                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wider font-bold block mb-1">BUYER (BILL TO)</span>
-                  <p className="font-bold text-slate-900 text-xs">{selectedInvoice.customer?.name}</p>
-                  {selectedInvoice.customer?.companyName && (
-                    <p className="font-semibold text-slate-800">M/s {selectedInvoice.customer.companyName}</p>
-                  )}
-                  <p className="text-slate-600">{selectedInvoice.customer?.billingAddress}</p>
-                  <p className="text-slate-700 font-mono mt-1"><strong>GSTIN:</strong> {selectedInvoice.customer?.gstNumber || "Unregistered / B2C"}</p>
-                  <p className="text-slate-700 font-mono"><strong>State Code:</strong> 27 - Maharashtra</p>
-                </div>
+              {/* SECTION 1: SUPPLIER DETAILS & METADATA GRID */}
+              <table className="w-full border-collapse border-b border-black text-[9px]">
+                <tbody>
+                  <tr>
+                    {/* Left Half: Supplier Details */}
+                    <td className="w-1/2 border-r border-black p-2 valign-top" style={{ verticalAlign: 'top' }}>
+                      <div className="font-bold text-[11px] uppercase tracking-tight">{branding?.companyName || "KOHINOOR ROLLING SHUTTERS"}</div>
+                      <div className="mt-1 text-[9px] leading-snug font-medium text-slate-800">
+                        Plot 42, GIDC Industrial Estate, Thane West,<br />
+                        Maharashtra - 400601<br />
+                        <strong>GSTIN/UIN:</strong> {branding?.gstNumber || "27AAACK5912K1Z9"}<br />
+                        <strong>State Name:</strong> Maharashtra, <strong>Code:</strong> 27<br />
+                        <strong>E-Mail:</strong> billing@kohinoor.com, <strong>Phone:</strong> +91 98765 43210
+                      </div>
+                    </td>
+                    
+                    {/* Right Half: Metadata Grid */}
+                    <td className="w-1/2 p-0 valign-top" style={{ verticalAlign: 'top' }}>
+                      <table className="w-full border-collapse text-[8px] leading-tight font-mono">
+                        <tbody>
+                          <tr className="border-b border-black">
+                            <td className="w-1/2 border-r border-black p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Invoice No.</span>
+                              <span className="font-bold text-[10px] text-black font-mono">{selectedInvoice.invoiceNumber}</span>
+                            </td>
+                            <td className="w-1/2 p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Dated</span>
+                              <span className="font-bold text-[9px] text-black">{new Date(selectedInvoice.createdAt).toLocaleDateString("en-IN")}</span>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-black">
+                            <td className="w-1/2 border-r border-black p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Delivery Note</span>
+                              <span className="font-bold text-[9px]">DN-2026-091</span>
+                            </td>
+                            <td className="w-1/2 p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Mode/Terms of Payment</span>
+                              <span className="font-bold text-[9px] font-sans">Bank Transfer / Immediate</span>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-black">
+                            <td className="w-1/2 border-r border-black p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Supplier's Ref.</span>
+                              <span className="font-bold text-[9px]">Ref. Quote: {selectedInvoice.quotation?.quoteNumber || "Direct"}</span>
+                            </td>
+                            <td className="w-1/2 p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Other Reference(s)</span>
+                              <span className="font-bold text-[9px]">N/A</span>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-black">
+                            <td className="w-1/2 border-r border-black p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Buyer's Order No.</span>
+                              <span className="font-bold text-[9px]">PO-9821-2026</span>
+                            </td>
+                            <td className="w-1/2 p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Dated</span>
+                              <span className="font-bold text-[9px]">{new Date(selectedInvoice.createdAt).toLocaleDateString("en-IN")}</span>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-black">
+                            <td className="w-1/2 border-r border-black p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Dispatch Doc No.</span>
+                              <span className="font-bold text-[9px]">DISP-2026-44</span>
+                            </td>
+                            <td className="w-1/2 p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Delivery Note Date</span>
+                              <span className="font-bold text-[9px]">{new Date(selectedInvoice.createdAt).toLocaleDateString("en-IN")}</span>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-black">
+                            <td className="w-1/2 border-r border-black p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Dispatched through</span>
+                              <span className="font-bold text-[9px] font-sans">Local Transport</span>
+                            </td>
+                            <td className="w-1/2 p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Destination</span>
+                              <span className="font-bold text-[9px] font-sans">Client Site</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td colSpan={2} className="p-1">
+                              <span className="text-[7px] text-gray-500 uppercase block font-sans font-bold">Terms of Delivery</span>
+                              <span className="font-medium text-[8px] font-sans leading-tight block text-slate-800">Ex-Factory / Site Installation included. Delivery transit risk belongs to consignee.</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
-                <div>
-                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wider font-bold block mb-1">CONSIGNEE (SHIP TO)</span>
-                  <p className="font-bold text-slate-900 text-xs">{selectedInvoice.customer?.name}</p>
-                  <p className="text-slate-600">{selectedInvoice.customer?.shippingAddress || selectedInvoice.customer?.billingAddress}</p>
-                  <p className="text-slate-700 font-mono mt-1"><strong>Contact Phone:</strong> {selectedInvoice.customer?.phone}</p>
-                  <p className="text-slate-700 font-mono"><strong>State Code:</strong> 27 - Maharashtra</p>
-                </div>
-              </div>
+              {/* SECTION 2: BUYER & CONSIGNEE DETAILS */}
+              <table className="w-full border-collapse border-b border-black text-[9px] leading-tight">
+                <tbody>
+                  <tr>
+                    {/* Consignee details */}
+                    <td className="w-1/2 border-r border-black p-2 valign-top" style={{ verticalAlign: 'top' }}>
+                      <span className="text-[7px] text-gray-500 uppercase block font-bold">Consignee (Ship to)</span>
+                      <div className="font-bold text-[10px] text-black mt-0.5">{selectedInvoice.customer?.name}</div>
+                      {selectedInvoice.customer?.companyName && (
+                        <div className="font-bold text-black">M/s {selectedInvoice.customer.companyName}</div>
+                      )}
+                      <div className="mt-0.5 text-slate-800">{selectedInvoice.customer?.shippingAddress || selectedInvoice.customer?.billingAddress}</div>
+                      <div className="mt-1 font-semibold text-slate-700">
+                        State Name: Maharashtra, State Code: 27<br />
+                        Contact Phone: {selectedInvoice.customer?.phone}
+                      </div>
+                    </td>
+                    
+                    {/* Buyer details */}
+                    <td className="w-1/2 p-2 valign-top" style={{ verticalAlign: 'top' }}>
+                      <span className="text-[7px] text-gray-500 uppercase block font-bold">Buyer (Bill to)</span>
+                      <div className="font-bold text-[10px] text-black mt-0.5">{selectedInvoice.customer?.name}</div>
+                      {selectedInvoice.customer?.companyName && (
+                        <div className="font-bold text-black">M/s {selectedInvoice.customer.companyName}</div>
+                      )}
+                      <div className="mt-0.5 text-slate-800">{selectedInvoice.customer?.billingAddress}</div>
+                      <div className="mt-1 font-semibold text-slate-700">
+                        <strong>GSTIN/UIN:</strong> <span className="font-mono">{selectedInvoice.customer?.gstNumber || "Unregistered / B2C"}</span><br />
+                        State Name: Maharashtra, State Code: 27
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
-              {/* EXPANDED INVOICE MATERIAL TABLE (AUTOMATIC BOM EXPANSION) */}
-              <div className="border border-slate-300 rounded overflow-hidden mb-3">
-                <table className="w-full text-left text-[9px] text-slate-800 border-collapse">
+              {/* SECTION 3: EXPANDED INVOICE MATERIAL TABLE */}
+              <div className="p-0">
+                <table className="w-full text-left text-[9px] text-black border-collapse">
                   <thead>
-                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 text-[8px] font-mono uppercase">
-                      <th className="p-1.5 text-center w-8 border-r border-slate-300">Sl</th>
-                      <th className="p-1.5 border-r border-slate-300">Description of Goods</th>
-                      <th className="p-1.5 text-center w-16 border-r border-slate-300">HSN</th>
-                      <th className="p-1.5 text-right w-12 border-r border-slate-300">Qty</th>
-                      <th className="p-1.5 text-center w-10 border-r border-slate-300">Unit</th>
-                      <th className="p-1.5 text-right w-16 border-r border-slate-300">Rate</th>
-                      <th className="p-1.5 text-right w-12 border-r border-slate-300">Disc%</th>
-                      <th className="p-1.5 text-right w-20 font-black">Amount</th>
+                    <tr className="bg-slate-50 text-black font-bold border-b border-black text-[8px] font-mono uppercase text-center">
+                      <th className="p-1 border-r border-black w-8">Sl No.</th>
+                      <th className="p-1 border-r border-black text-left">Description of Goods</th>
+                      <th className="p-1 border-r border-black w-16">HSN/SAC</th>
+                      <th className="p-1 border-r border-black w-14 text-right">Quantity</th>
+                      <th className="p-1 border-r border-black w-20 text-right">Rate</th>
+                      <th className="p-1 border-r border-black w-10 text-center">per</th>
+                      <th className="p-1 text-right w-24">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody>
+                    {/* Actual items */}
                     {activeInvoiceMaterialItems.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 font-sans">
-                        <td className="p-1.5 text-center font-mono font-bold border-r border-slate-200">{idx + 1}</td>
-                        <td className="p-1.5 border-r border-slate-200 font-semibold text-slate-900">{item.description}</td>
-                        <td className="p-1.5 text-center font-mono border-r border-slate-200">{item.hsnCode}</td>
-                        <td className="p-1.5 text-right font-mono border-r border-slate-200">{item.quantity}</td>
-                        <td className="p-1.5 text-center font-mono border-r border-slate-200">{item.unit}</td>
-                        <td className="p-1.5 text-right font-mono border-r border-slate-200">₹{item.rate.toLocaleString("en-IN")}</td>
-                        <td className="p-1.5 text-right font-mono border-r border-slate-200">{item.discountPct || 0}%</td>
-                        <td className="p-1.5 text-right font-mono font-bold text-slate-950">₹{item.amount.toLocaleString("en-IN")}</td>
+                      <tr key={idx} className="font-mono text-[9px] h-6">
+                        <td className="p-1 border-r border-black text-center font-bold">{idx + 1}</td>
+                        <td className="p-1 border-r border-black font-sans font-semibold text-slate-900 leading-tight">{item.description}</td>
+                        <td className="p-1 border-r border-black text-center">{item.hsnCode || "73089090"}</td>
+                        <td className="p-1 border-r border-black text-right">{item.quantity}</td>
+                        <td className="p-1 border-r border-black text-right">₹{item.rate.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                        <td className="p-1 border-r border-black text-center font-sans text-[8px] font-bold">{item.unit}</td>
+                        <td className="p-1 text-right font-bold text-slate-955">₹{item.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                       </tr>
                     ))}
+                    
+                    {/* Empty Padding Rows to maintain vertical lines to the bottom */}
+                    {Array.from({ length: Math.max(0, 10 - activeInvoiceMaterialItems.length) }).map((_, padIdx) => (
+                      <tr key={`pad-${padIdx}`} className="h-6 font-mono text-[9px]">
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="p-1 text-right"></td>
+                      </tr>
+                    ))}
+
+                    {/* Ledger Tax & Discount Rows inside Description Column */}
+                    {discount > 0 && (
+                      <tr className="font-mono text-[9px] h-6">
+                        <td className="border-r border-black"></td>
+                        <td className="p-1 border-r border-black text-rose-600 font-bold font-sans">Less: Discount</td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="p-1 text-right font-bold text-rose-600">-₹{discount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      </tr>
+                    )}
+
+                    <tr className="font-mono text-[9px] h-6">
+                      <td className="border-r border-black"></td>
+                      <td className="p-1 border-r border-black font-semibold text-slate-800 font-sans">CGST @ {cgstRate}%</td>
+                      <td className="border-r border-black"></td>
+                      <td className="border-r border-black"></td>
+                      <td className="border-r border-black"></td>
+                      <td className="border-r border-black"></td>
+                      <td className="p-1 text-right font-bold">₹{cgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+
+                    <tr className="font-mono text-[9px] h-6">
+                      <td className="border-r border-black"></td>
+                      <td className="p-1 border-r border-black font-semibold text-slate-800 font-sans">SGST @ {sgstRate}%</td>
+                      <td className="border-r border-black"></td>
+                      <td className="border-r border-black"></td>
+                      <td className="border-r border-black"></td>
+                      <td className="border-r border-black"></td>
+                      <td className="p-1 text-right font-bold">₹{sgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                    </tr>
+
+                    {Math.abs(roundOff) > 0.001 && (
+                      <tr className="font-mono text-[9px] h-6">
+                        <td className="border-r border-black"></td>
+                        <td className="p-1 border-r border-black text-slate-600 font-sans">Round Off</td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="border-r border-black"></td>
+                        <td className="p-1 text-right font-bold text-slate-700">{roundOff >= 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}</td>
+                      </tr>
+                    )}
+
+                    {/* Total Row */}
+                    <tr className="border-t border-b border-black font-bold font-mono text-[9px] bg-slate-50">
+                      <td className="p-1 border-r border-black text-center"></td>
+                      <td className="p-1 border-r border-black uppercase font-bold font-sans">Total</td>
+                      <td className="p-1 border-r border-black text-center"></td>
+                      <td className="p-1 border-r border-black text-right font-bold">{totalQuantity} {activeInvoiceMaterialItems[0]?.unit || "PCS"}</td>
+                      <td className="p-1 border-r border-black"></td>
+                      <td className="p-1 border-r border-black"></td>
+                      <td className="p-1 text-right font-black text-[11px]">₹{grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
 
-              {/* FINANCIAL CALCULATIONS & AUTO CALCULATED TOTALS */}
-              <div className="flex justify-between items-start border border-slate-300 rounded p-2 mb-3 text-[9px]">
-                <div className="flex flex-col gap-2 max-w-md">
-                  <div>
-                    <span className="font-bold text-slate-600 font-mono uppercase text-[9px] block">Amount Chargeable (in words)</span>
-                    <span className="font-bold text-slate-950 text-xs italic">{amountInWords}</span>
-                  </div>
-                </div>
-
-                <div className="w-64 flex flex-col gap-1 text-right font-mono">
-                  <div className="flex justify-between text-slate-700">
-                    <span>Subtotal:</span>
-                    <span className="font-bold text-slate-900">₹{subtotal.toLocaleString("en-IN")}</span>
-                  </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-rose-600">
-                      <span>Less: Discount:</span>
-                      <span>-₹{discount.toLocaleString("en-IN")}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-slate-700">
-                    <span>CGST ({gstRate / 2}%):</span>
-                    <span>₹{cgstAmount.toLocaleString("en-IN")}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-700">
-                    <span>SGST ({gstRate / 2}%):</span>
-                    <span>₹{sgstAmount.toLocaleString("en-IN")}</span>
-                  </div>
-                  {Math.abs(roundOff) > 0.001 && (
-                    <div className="flex justify-between text-slate-600 text-[9px]">
-                      <span>Round Off:</span>
-                      <span>{roundOff >= 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-slate-950 font-black border-t-2 border-slate-900 pt-1 text-sm mt-1">
-                    <span>Grand Total:</span>
-                    <span>₹{grandTotal.toLocaleString("en-IN")}</span>
-                  </div>
-                </div>
+              {/* SECTION 4: WORDS BOX */}
+              <div className="border-b border-black p-2 text-[9px]">
+                <div className="text-[7px] text-gray-500 uppercase block font-semibold">Amount Chargeable (in words)</div>
+                <div className="font-bold text-[10px] text-black italic mt-0.5">{amountInWords}</div>
               </div>
 
-              {/* HSN / SAC TAX BREAKDOWN SUMMARY TABLE */}
-              <div className="border border-slate-300 rounded overflow-hidden mb-3">
-                <div className="bg-slate-100 p-1.5 border-b border-slate-300 font-mono text-[9px] font-bold uppercase text-slate-800">
-                  HSN / SAC Tax Breakdown Summary
-                </div>
-                <table className="w-full text-left text-[9px] text-slate-800 font-mono border-collapse">
+              {/* SECTION 5: HSN/SAC TAX BREAKDOWN TABLE */}
+              <div className="p-0 border-b border-black">
+                <table className="w-full text-left text-[8px] text-black font-mono border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 font-bold border-b border-slate-300 uppercase">
-                      <th className="p-1.5 border-r border-slate-300">HSN / SAC</th>
-                      <th className="p-1.5 text-right border-r border-slate-300">Taxable Value (₹)</th>
-                      <th className="p-1.5 text-right border-r border-slate-300">CGST Rate</th>
-                      <th className="p-1.5 text-right border-r border-slate-300">CGST Amt (₹)</th>
-                      <th className="p-1.5 text-right border-r border-slate-300">SGST Rate</th>
-                      <th className="p-1.5 text-right border-r border-slate-300">SGST Amt (₹)</th>
-                      <th className="p-1.5 text-right font-bold">Total Tax (₹)</th>
+                    <tr className="border-b border-black text-center font-bold bg-slate-50 text-[7px] uppercase font-sans">
+                      <th className="p-1 border-r border-black" rowSpan={2} style={{ verticalAlign: 'middle' }}>HSN/SAC</th>
+                      <th className="p-1 border-r border-black text-right" rowSpan={2} style={{ verticalAlign: 'middle' }}>Taxable Value (₹)</th>
+                      <th className="p-1 border-r border-black" colSpan={2}>Central Tax</th>
+                      <th className="p-1 border-r border-black" colSpan={2}>State Tax</th>
+                      <th className="p-1 text-right" rowSpan={2} style={{ verticalAlign: 'middle' }}>Total Tax Amount (₹)</th>
+                    </tr>
+                    <tr className="border-b border-black text-center font-bold bg-slate-50 text-[7px] uppercase font-sans">
+                      <th className="p-1 border-r border-black text-right">Rate</th>
+                      <th className="p-1 border-r border-black text-right">Amount (₹)</th>
+                      <th className="p-1 border-r border-black text-right">Rate</th>
+                      <th className="p-1 border-r border-black text-right">Amount (₹)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody>
                     {hsnSummaryList.map((hsn, idx) => (
-                      <tr key={idx}>
-                        <td className="p-1.5 font-bold border-r border-slate-200">{hsn.hsnCode}</td>
-                        <td className="p-1.5 text-right border-r border-slate-200">₹{hsn.taxableValue.toLocaleString("en-IN")}</td>
-                        <td className="p-1.5 text-right border-r border-slate-200">{gstRate / 2}%</td>
-                        <td className="p-1.5 text-right border-r border-slate-200">₹{hsn.cgstAmount.toLocaleString("en-IN")}</td>
-                        <td className="p-1.5 text-right border-r border-slate-200">{gstRate / 2}%</td>
-                        <td className="p-1.5 text-right border-r border-slate-200">₹{hsn.sgstAmount.toLocaleString("en-IN")}</td>
-                        <td className="p-1.5 text-right font-bold text-slate-900">₹{hsn.totalTax.toLocaleString("en-IN")}</td>
+                      <tr key={idx} className="border-b border-gray-200 text-center">
+                        <td className="p-1 border-r border-black text-left font-bold">{hsn.hsnCode}</td>
+                        <td className="p-1 border-r border-black text-right">₹{hsn.taxableValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                        <td className="p-1 border-r border-black text-right">{gstRate / 2}%</td>
+                        <td className="p-1 border-r border-black text-right">₹{hsn.cgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                        <td className="p-1 border-r border-black text-right">{gstRate / 2}%</td>
+                        <td className="p-1 border-r border-black text-right">₹{hsn.sgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                        <td className="p-1 text-right font-bold">₹{hsn.totalTax.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                       </tr>
                     ))}
+                    <tr className="font-bold bg-slate-50 text-center font-bold border-t border-black">
+                      <td className="p-1 border-r border-black text-left uppercase font-sans">Total</td>
+                      <td className="p-1 border-r border-black text-right">₹{taxableValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="p-1 border-r border-black"></td>
+                      <td className="p-1 border-r border-black text-right">₹{cgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="p-1 border-r border-black"></td>
+                      <td className="p-1 border-r border-black text-right">₹{sgstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                      <td className="p-1 text-right font-black">₹{totalGstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
 
-              {/* DECLARATION, BANK DETAILS, SIGNATURE & SEAL */}
-              <div className="grid grid-cols-2 gap-3 border border-slate-300 rounded p-2 text-[8px] leading-snug mb-2">
-                <div>
-                  <span className="font-bold text-slate-700 uppercase font-mono tracking-wider block mb-1">Company Bank Details</span>
-                  <p className="text-slate-800 font-mono"><strong>Bank:</strong> {branding?.bankName || "State Bank of India"}</p>
-                  <p className="text-slate-800 font-mono"><strong>A/C No:</strong> {branding?.bankAccountNo || "39810293812"}</p>
-                  <p className="text-slate-800 font-mono"><strong>IFSC:</strong> {branding?.bankIfsc || "SBIN0001824"}</p>
-                  <p className="text-slate-800 font-mono"><strong>Branch:</strong> Thane Commercial Branch</p>
+              {/* SECTION 6: DECLARATION, BANK DETAILS & AUTHORISED SIGNATORY */}
+              <table className="w-full border-collapse text-[8px] leading-tight">
+                <tbody>
+                  <tr>
+                    {/* Left half: Bank details & Declaration */}
+                    <td className="w-1/2 border-r border-black p-2 valign-top font-sans" style={{ verticalAlign: 'top' }}>
+                      <div className="font-bold text-gray-700 uppercase font-mono tracking-wider block mb-1">Company's Bank Details</div>
+                      <div className="font-mono text-slate-800 font-semibold leading-normal">
+                        <strong>Bank Name:</strong> {branding?.bankName || "State Bank of India"}<br />
+                        <strong>A/c No:</strong> {branding?.bankAccountNo || "38927103829"}<br />
+                        <strong>IFS Code:</strong> {branding?.bankIfsc || "SBIN0004561"}<br />
+                        <strong>Branch:</strong> Thane Commercial Branch
+                      </div>
+                      
+                      <div className="font-bold text-gray-700 uppercase font-mono tracking-wider block mt-3 mb-1">Declaration</div>
+                      <div className="text-slate-600 italic leading-snug font-medium">
+                        We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+                      </div>
+                    </td>
+                    
+                    {/* Right half: Authorised Signatory box */}
+                    <td className="w-1/2 p-2 valign-top text-right" style={{ verticalAlign: 'top' }}>
+                      <div className="flex flex-col justify-between h-[100px] w-full items-end">
+                        <div className="font-bold text-black uppercase text-[8px]">
+                          For {branding?.companyName || "KOHINOOR ROLLING SHUTTERS"}
+                        </div>
+                        
+                        <div className="w-40 border-t border-black pt-1 text-center text-[9px] text-black font-bold uppercase tracking-wide">
+                          Authorised Signatory
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
-                  <span className="font-bold text-slate-700 uppercase font-mono tracking-wider block mt-3 mb-1">Declaration</span>
-                  <p className="text-slate-600 italic">We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.</p>
-                </div>
-
-                <div className="flex flex-col justify-between items-end text-right">
-                  <div className="flex flex-col items-end">
-                    <span className="font-bold text-slate-900 text-[10px] uppercase">For {branding?.companyName || "KOHINOOR ROLLING SHUTTERS"}</span>
-                  </div>
-
-                  <div className="flex gap-3 items-end mt-6">
-                    <div className="w-32 border-b border-slate-400 pb-1 text-center text-[9px] text-slate-600 font-mono">
-                      Authorized Signatory
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* FOOTER NOTE */}
-              <div className="text-center text-[8px] text-slate-400 font-mono uppercase tracking-widest border-t border-slate-200 pt-2">
+              {/* Computer Generated Disclaimer */}
+              <div className="text-center text-[7px] text-slate-500 font-mono uppercase tracking-widest border-t border-black pt-1 mt-1">
                 This is a Computer Generated Invoice
               </div>
             </div>

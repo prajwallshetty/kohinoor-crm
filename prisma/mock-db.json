@@ -219,7 +219,9 @@
     "bankAccountNo": "38927103829",
     "bankIfsc": "SBIN0004561",
     "invoiceTerms": "1. Goods once sold will not be taken back.\n2. Interest @ 18% will be charged if payment is not made within due date.\n3. Warranty claims must represent valid manufacturing defects.",
-    "quotationTerms": "1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client."
+    "quotationTerms": "1. Price quoted is valid for 30 days.\n2. 50% advance along with order. Balance on delivery.\n3. Civil work / electrical wiring must be provided by client.",
+    "isMasterDataLocked": true,
+    "updatedAt": "2026-08-03T17:37:35.733Z"
   },
   "storageQuota": {
     "id": "sq-1",
@@ -1097,6 +1099,26 @@
       "isDisabled": false,
       "createdAt": "2026-07-30T20:32:55.115992",
       "updatedAt": "2026-07-30T20:32:55.115992"
+    },
+    {
+      "id": "mi-gm-1785777610656",
+      "category": "Material Categories",
+      "name": "Gate Material",
+      "rate": 0,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-08-03T17:20:10.656Z",
+      "updatedAt": "2026-08-03T17:20:10.656Z"
+    },
+    {
+      "id": "mi-sg-1785777610656",
+      "category": "Gate Material",
+      "name": "Standard Gate",
+      "rate": 150,
+      "unit": "Sft",
+      "isDisabled": false,
+      "createdAt": "2026-08-03T17:20:10.656Z",
+      "updatedAt": "2026-08-03T17:20:10.656Z"
     }
   ],
   "quotationTemplates": [
@@ -1838,6 +1860,33 @@
       ],
       "createdAt": "2026-07-25T14:23:28.778Z",
       "updatedAt": "2026-07-30T20:32:55.115978"
+    },
+    {
+      "id": "qt-4",
+      "name": "Gate",
+      "description": "Standard Gate template. Calculates fabrication cost based on width and height.",
+      "active": true,
+      "displayOrder": 5,
+      "version": 1,
+      "rules": [
+        {
+          "id": "gt-fab",
+          "label": "Gate Fabrication",
+          "materialCategory": "Gate Material",
+          "defaultVariant": "Standard Gate",
+          "formula": "ROUND((width * height) / 144, 2)",
+          "descriptionFormat": "{width} × {height} Gate Structure Fabrication",
+          "unit": "Sft",
+          "exportVar": "",
+          "resultVar": "",
+          "displayOrder": 1,
+          "editable": true,
+          "includeWhen": null,
+          "conditions": []
+        }
+      ],
+      "createdAt": "2026-08-03T17:20:13.995Z",
+      "updatedAt": "2026-08-03T17:20:13.995Z"
     }
   ]
 }
