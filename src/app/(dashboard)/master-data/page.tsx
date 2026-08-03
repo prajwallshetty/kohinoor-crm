@@ -21,18 +21,24 @@ const DEFAULT_CATEGORIES = [
   "Material Types",
   "Thickness",
   "Profiles",
+  "Bottom Plate",
+  "Pipes",
+  "Guide Channel",
+  "Spring 1",
+  "Spring 2",
+  "Spring 3",
   "Springs",
   "Brackets",
   "Wheels",
-  "Pipes",
-  "Guides",
   "Kabadi",
-  "Top Caps",
   "Handles",
+  "Lock Set",
   "Locks",
   "Fittings",
+  "Motor",
   "Motor Brands",
-  "Motor Models"
+  "Motor Models",
+  "Top Caps"
 ];
 
 export default function MasterDataPage() {

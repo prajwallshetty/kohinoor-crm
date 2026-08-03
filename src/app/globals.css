@@ -144,7 +144,7 @@ body {
 
   @page {
     size: A4 portrait;
-    margin: 6mm;
+    margin: 4mm;
   }
 
   html, body {
@@ -177,12 +177,39 @@ body {
     background: transparent !important;
   }
 
-  /* Collapse all grid layouts to single column for print */
+  /* Collapse grid layouts for print */
   .grid.grid-cols-1.lg\:grid-cols-3 {
     display: block !important;
   }
 
-  /* Printable card styling */
+  /* Half A4 (A5) Quotation Print Container */
+  .quotation-a5-print {
+    width: 148mm !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 4mm !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  /* Tally Prime GST Invoice Container */
+  .tally-invoice-print {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    border: 2px solid #000000 !important;
+    page-break-inside: avoid;
+  }
+
+  /* Printable card fallback */
   .printable-card {
     background-color: #ffffff !important;
     color: #0f172a !important;
@@ -196,62 +223,14 @@ body {
     page-break-inside: avoid;
   }
 
-  /* Tighten table cell padding for print */
+  /* Table styling for print */
   .printable-card table th,
-  .printable-card table td {
+  .printable-card table td,
+  .tally-invoice-print table th,
+  .tally-invoice-print table td {
     padding: 2px 4px !important;
-    font-size: 8px !important;
-    line-height: 1.3 !important;
-  }
-
-  /* Compact spacing between invoice sections */
-  .printable-card .mb-4 {
-    margin-bottom: 6px !important;
-  }
-
-  .printable-card .p-3 {
-    padding: 6px !important;
-  }
-
-  .printable-card .pb-4 {
-    padding-bottom: 6px !important;
-  }
-
-  .printable-card .mb-4,
-  .printable-card .gap-4 {
-    gap: 4px !important;
-  }
-
-  /* Shrink header text in print */
-  .printable-card .text-2xl {
-    font-size: 16px !important;
-  }
-
-  .printable-card .text-base {
-    font-size: 11px !important;
-  }
-
-  .printable-card .text-xs {
-    font-size: 8px !important;
-  }
-
-  .printable-card .text-sm {
     font-size: 9px !important;
-  }
-
-  /* Totals section width */
-  .printable-card .w-64 {
-    width: 200px !important;
-  }
-
-  /* Signature section compact */
-  .printable-card .mt-8 {
-    margin-top: 12px !important;
-  }
-
-  .printable-card .w-24.h-16 {
-    width: 60px !important;
-    height: 40px !important;
+    line-height: 1.2 !important;
   }
 
   /* Ensure page breaks don't split tables */

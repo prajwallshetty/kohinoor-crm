@@ -2117,8 +2117,8 @@ const seedQuotationTemplates = [
     ]
   },
   {
-    name: "Industrial Shutter",
-    description: "Heavy industrial rolling shutter. Configure rules for this shutter type.",
+    name: "Custom Shutter",
+    description: "Fully customized rolling shutter configuration. Select material variants directly.",
     active: true, displayOrder: 4, version: 1, rules: []
   }
 ];

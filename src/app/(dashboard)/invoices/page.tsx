@@ -944,7 +944,7 @@ export default function InvoicesPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start print:block print:w-full print:m-0 print:p-0">
             {/* TRADITIONAL GST TAX INVOICE PRINT CARD */}
-            <div className="lg:col-span-2 bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-xl border border-slate-300 font-sans max-w-4xl mx-auto w-full printable-card">
+            <div className="lg:col-span-2 bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-xl border-2 border-slate-900 font-sans max-w-4xl mx-auto w-full printable-card tally-invoice-print">
               
               {/* TOP HEADER: COMPANY DETAILS (Left) & INVOICE DETAILS (Right) */}
               <div className="grid grid-cols-2 border-b-2 border-slate-900 pb-3 mb-3 gap-3">
