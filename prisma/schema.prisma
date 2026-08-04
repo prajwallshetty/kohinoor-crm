@@ -161,6 +161,9 @@ model Quotation {
 
   items         QuotationItem[]
   invoices      Invoice[]
+
+  @@index([customerId])
+  @@index([leadId])
 }
 
 model QuotationItem {
@@ -224,6 +227,9 @@ model Invoice {
   updatedAt     DateTime          @updatedAt
   
   payments      Payment[]
+
+  @@index([customerId])
+  @@index([quotationId])
 }
 
 model Payment {
@@ -236,6 +242,8 @@ model Payment {
   transactionRef String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+
+  @@index([invoiceId])
 }
 
 

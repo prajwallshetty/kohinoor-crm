@@ -10,11 +10,11 @@ import {
   Users,
   FileSpreadsheet,
   Receipt,
-  CreditCard,
-  Settings,
-  LogOut,
   Database,
-  LayoutTemplate
+  LayoutTemplate,
+  FileText,
+  Settings,
+  LogOut
 } from "lucide-react";
 
 export function Sidebar() {
@@ -25,13 +25,13 @@ export function Sidebar() {
 
   const menuItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Customers & Sites", href: "/customers", icon: Users },
+    { name: "Customers", href: "/customers", icon: Users },
     { name: "Quotations", href: "/quotations", icon: FileSpreadsheet },
     { name: "Invoices", href: "/invoices", icon: Receipt },
-    { name: "Payments Ledger", href: "/payments", icon: CreditCard },
     { name: "Master Data", href: "/master-data", icon: Database },
-    { name: "Quotation Templates", href: "/quotation-templates", icon: LayoutTemplate },
-    { name: "Admin Branding", href: "/admin", icon: Settings }
+    { name: "Templates", href: "/quotation-templates", icon: LayoutTemplate },
+    { name: "Reports", href: "/reports", icon: FileText },
+    { name: "Settings", href: "/admin", icon: Settings }
   ];
 
   return (
@@ -42,7 +42,7 @@ export function Sidebar() {
           <Image src="/logo.png" alt="Kohinoor Logo" width={32} height={32} className="object-contain w-full h-full" />
         </div>
         <div className="flex flex-col">
-          <span className="font-heading font-semibold text-sm leading-tight">Kohinoor Rolling Shutters</span>
+          <span className="font-heading font-semibold text-sm leading-tight text-foreground">Kohinoor Rolling Shutters</span>
           <span className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">Enterprise CRM</span>
         </div>
       </div>
@@ -73,15 +73,14 @@ export function Sidebar() {
         })}
       </nav>
 
-
       {/* User Profile Footer */}
       <div className="p-4 border-t border-border flex flex-col gap-2 bg-secondary/20">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-300 font-bold flex items-center justify-center text-xs">
-            {user.name.charAt(0)}
+            {user.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate">{user.name}</p>
+            <p className="text-xs font-medium truncate text-foreground">{user.name}</p>
             <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
           </div>
         </div>

@@ -293,6 +293,13 @@ export default function InvoicesPage() {
   const [unconvertedQuotes, setUnconvertedQuotes] = useState<Quotation[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "PAID" | "PARTIAL" | "PENDING">("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
   const [loading, setLoading] = useState(true);
 
   // Active Invoice for details / print view
@@ -324,9 +331,9 @@ export default function InvoicesPage() {
     if (showLoading) setLoading(true);
     try {
       const [invRes, quoteRes, brandRes] = await Promise.all([
-        fetch("/api/invoices"),
-        fetch("/api/quotations"),
-        fetch("/api/admin/branding")
+        fetch("/api/invoices", { cache: "no-store" }),
+        fetch("/api/quotations", { cache: "no-store" }),
+        fetch("/api/admin/branding", { cache: "no-store" })
       ]);
 
       const [invList, quoteList, brandData] = await Promise.all([
@@ -391,15 +398,49 @@ export default function InvoicesPage() {
       if (found) {
         setQuoteToConvert(found);
         
-        // AUTOMATICALLY EXPAND EVERY SHUTTER INTO BOM MATERIAL ITEMS
+        // AUTOMATICALLY MAP EVERY ITEM IN THE QUOTE
         let allMaterials: InvoiceMaterialItem[] = [];
         if (found.items && found.items.length > 0) {
-          found.items.forEach((shutter: any) => {
-            const expanded = expandShutterToBOMMaterials(shutter);
-            allMaterials = [...allMaterials, ...expanded];
+          allMaterials = found.items.map((item: any) => {
+            const prodName = item.productName || "Item";
+            let hsnCode = "73089090";
+            const lowerName = prodName.toLowerCase();
+            if (lowerName.includes("slat") || lowerName.includes("sheet")) {
+              hsnCode = "73083000";
+            } else if (lowerName.includes("pipe") || lowerName.includes("shaft")) {
+              hsnCode = "73063090";
+            } else if (lowerName.includes("spring")) {
+              hsnCode = "73202090";
+            } else if (lowerName.includes("motor")) {
+              hsnCode = "85011019";
+            } else if (lowerName.includes("wheel")) {
+              hsnCode = "84839000";
+            } else if (lowerName.includes("lock")) {
+              hsnCode = "83014090";
+            }
+
+            return {
+              description: item.shutterName || item.productName || "Item",
+              hsnCode,
+              quantity: parseInt(item.quantity || 1),
+              unit: item.unit || "PCS",
+              rate: parseFloat(item.unitPrice || 0),
+              amount: parseFloat(item.lineTotal || 0),
+              discountPct: 0
+            };
           });
         } else {
-          allMaterials = expandShutterToBOMMaterials({ width: 120, height: 96, quantity: 1, unitPrice: 18000 });
+          allMaterials = [
+            {
+              description: "Standard Rolling Shutter",
+              hsnCode: "73083000",
+              quantity: 1,
+              unit: "PCS",
+              rate: Number(found.totalAmount ?? 18000),
+              amount: Number(found.totalAmount ?? 18000),
+              discountPct: 0
+            }
+          ];
         }
 
         // Re-index Sl No
@@ -580,14 +621,49 @@ export default function InvoicesPage() {
     if (selectedInvoice.materialItems && selectedInvoice.materialItems.length > 0) {
       return selectedInvoice.materialItems;
     }
-    // Fallback: Expand from quotation shutters if available
+    // Fallback: Map from quotation items if available
     let list: InvoiceMaterialItem[] = [];
     if (selectedInvoice.quotation?.items && selectedInvoice.quotation.items.length > 0) {
-      selectedInvoice.quotation.items.forEach((shutter: any) => {
-        list = [...list, ...expandShutterToBOMMaterials(shutter)];
+      list = selectedInvoice.quotation.items.map((item: any) => {
+        const prodName = item.productName || "Item";
+        let hsnCode = "73089090";
+        const lowerName = prodName.toLowerCase();
+        if (lowerName.includes("slat") || lowerName.includes("sheet")) {
+          hsnCode = "73083000";
+        } else if (lowerName.includes("pipe") || lowerName.includes("shaft")) {
+          hsnCode = "73063090";
+        } else if (lowerName.includes("spring")) {
+          hsnCode = "73202090";
+        } else if (lowerName.includes("motor")) {
+          hsnCode = "85011019";
+        } else if (lowerName.includes("wheel")) {
+          hsnCode = "84839000";
+        } else if (lowerName.includes("lock")) {
+          hsnCode = "83014090";
+        }
+
+        return {
+          description: item.shutterName || item.productName || "Item",
+          hsnCode,
+          quantity: parseInt(item.quantity || 1),
+          unit: item.unit || "PCS",
+          rate: parseFloat(item.unitPrice || 0),
+          amount: parseFloat(item.lineTotal || 0),
+          discountPct: 0
+        };
       });
     } else {
-      list = expandShutterToBOMMaterials({ width: 120, height: 96, quantity: 1, unitPrice: selectedInvoice.totalAmount / 1.18 });
+      list = [
+        {
+          description: "Standard Rolling Shutter",
+          hsnCode: "73083000",
+          quantity: 1,
+          unit: "PCS",
+          rate: Number(selectedInvoice.totalAmount ?? 18000),
+          amount: Number(selectedInvoice.totalAmount ?? 18000),
+          discountPct: 0
+        }
+      ];
     }
     return list.map((it, idx) => ({ ...it, slNo: idx + 1 }));
   })();
@@ -783,103 +859,150 @@ export default function InvoicesPage() {
                         Syncing account books...
                       </td>
                     </tr>
-                  ) : filteredInvoices.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center p-8 text-muted-foreground">
-                        No invoice matches found matching your filters.
-                      </td>
-                    </tr>
                   ) : (
-                    filteredInvoices.map((inv) => {
-                      const balance = inv.totalAmount - inv.amountPaid;
-                      const paidPct = inv.totalAmount > 0 ? Math.min(100, Math.round((inv.amountPaid / inv.totalAmount) * 100)) : 0;
+                    (() => {
+                      const total = filteredInvoices.length;
+                      const pages = Math.ceil(total / itemsPerPage) || 1;
+                      const start = (currentPage - 1) * itemsPerPage;
+                      const paginated = filteredInvoices.slice(start, start + itemsPerPage);
+
+                      if (paginated.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={8} className="text-center p-8 text-muted-foreground">
+                              No invoice matches found matching your filters.
+                            </td>
+                          </tr>
+                        );
+                      }
 
                       return (
-                        <tr key={inv.id} className="hover:bg-secondary/25 transition-colors">
-                          <td className="p-4 font-bold text-foreground font-mono">{inv.invoiceNumber}</td>
-                          <td className="p-4 font-mono text-muted-foreground/80">
-                            {inv.quotation?.quoteNumber || "Direct Invoice"}
-                          </td>
-                          <td className="p-4">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-foreground">{inv.customer?.name}</span>
-                              {inv.customer?.companyName && (
-                                <span className="text-[10px] text-muted-foreground">{inv.customer.companyName}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4 text-right font-bold text-foreground font-mono">
-                            ₹{inv.totalAmount.toLocaleString("en-IN")}
-                          </td>
-                          <td className="p-4">
-                            <div className="flex flex-col gap-1 w-full">
-                              <div className="flex justify-between text-[10px] font-mono">
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹{inv.amountPaid.toLocaleString("en-IN")}</span>
-                                <span className="text-muted-foreground font-bold">{paidPct}%</span>
-                              </div>
-                              <div className="w-full h-2 bg-secondary rounded-full overflow-hidden border border-border/40">
-                                <div
-                                  className={`h-full transition-all duration-300 ${
-                                    paidPct === 100 ? "bg-emerald-500" : paidPct > 0 ? "bg-amber-500" : "bg-rose-500"
-                                  }`}
-                                  style={{ width: `${paidPct}%` }}
-                                />
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-4 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
-                            ₹{balance.toLocaleString("en-IN")}
-                          </td>
-                          <td className="p-4">
-                            <span
-                              className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-md border ${
-                                inv.status === "PAID"
-                                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                                  : inv.status === "PARTIAL"
-                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                                  : "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30"
-                              }`}
-                            >
-                              {inv.status}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center justify-end gap-2 pr-2">
-                              {inv.status !== "PAID" && (
-                                <button
-                                  onClick={() => { setSelectedInvoice(inv); setShowPaymentModal(true); }}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-md text-xs flex items-center gap-1 shadow-sm transition-all shrink-0 cursor-pointer"
-                                  title="Log Payment"
-                                >
-                                  <DollarSign className="w-3.5 h-3.5" />
-                                  <span>Pay</span>
-                                </button>
-                              )}
+                        <>
+                          {paginated.map((inv) => {
+                            const balance = inv.totalAmount - inv.amountPaid;
+                            const paidPct = inv.totalAmount > 0 ? Math.min(100, Math.round((inv.amountPaid / inv.totalAmount) * 100)) : 0;
 
-                              <button
-                                onClick={() => setSelectedInvoice(inv)}
-                                className="bg-secondary hover:bg-secondary/80 border border-border/80 text-foreground font-semibold px-2.5 py-1 rounded-md text-xs flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
-                              >
-                                <Receipt className="w-3.5 h-3.5 text-muted-foreground" />
-                                <span>Preview GST Tax Invoice</span>
-                              </button>
+                            return (
+                              <tr key={inv.id} className="hover:bg-secondary/25 transition-colors">
+                                <td className="p-4 font-bold text-foreground font-mono">{inv.invoiceNumber}</td>
+                                <td className="p-4 font-mono text-muted-foreground/80">
+                                  {inv.quotation?.quoteNumber || "Direct Invoice"}
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex flex-col">
+                                    <span className="font-semibold text-foreground">{inv.customer?.name}</span>
+                                    {inv.customer?.companyName && (
+                                      <span className="text-[10px] text-muted-foreground">{inv.customer.companyName}</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-4 text-right font-bold text-foreground font-mono">
+                                  ₹{inv.totalAmount.toLocaleString("en-IN")}
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex flex-col gap-1 w-full">
+                                    <div className="flex justify-between text-[10px] font-mono">
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹{inv.amountPaid.toLocaleString("en-IN")}</span>
+                                      <span className="text-muted-foreground font-bold">{paidPct}%</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden border border-border/40">
+                                      <div
+                                        className={`h-full transition-all duration-300 ${
+                                          paidPct === 100 ? "bg-emerald-500" : paidPct > 0 ? "bg-amber-500" : "bg-rose-500"
+                                        }`}
+                                        style={{ width: `${paidPct}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="p-4 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                                  ₹{balance.toLocaleString("en-IN")}
+                                </td>
+                                <td className="p-4">
+                                  <span
+                                    className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-md border ${
+                                      inv.status === "PAID"
+                                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                                        : inv.status === "PARTIAL"
+                                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                                        : "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30"
+                                    }`}
+                                  >
+                                    {inv.status}
+                                  </span>
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex items-center justify-end gap-2 pr-2">
+                                    {inv.status !== "PAID" && (
+                                      <button
+                                        onClick={() => { setSelectedInvoice(inv); setShowPaymentModal(true); }}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-md text-xs flex items-center gap-1 shadow-sm transition-all shrink-0 cursor-pointer"
+                                        title="Log Payment"
+                                      >
+                                        <DollarSign className="w-3.5 h-3.5" />
+                                        <span>Pay</span>
+                                      </button>
+                                    )}
 
-                              <button
-                                onClick={() => handleDeleteInvoice(inv.id)}
-                                className="p-1.5 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 rounded-md transition-all shrink-0 cursor-pointer"
-                                title="Delete Invoice"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                                    <button
+                                      onClick={() => setSelectedInvoice(inv)}
+                                      className="bg-secondary hover:bg-secondary/80 border border-border/80 text-foreground font-semibold px-2.5 py-1 rounded-md text-xs flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+                                    >
+                                      <Receipt className="w-3.5 h-3.5 text-muted-foreground" />
+                                      <span>Preview GST Tax Invoice</span>
+                                    </button>
+
+                                    <button
+                                      onClick={() => handleDeleteInvoice(inv.id)}
+                                      className="p-1.5 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 rounded-md transition-all shrink-0 cursor-pointer"
+                                      title="Delete Invoice"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </>
                       );
-                    })
+                    })()
                   )}
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Footer */}
+            {(() => {
+              const total = filteredInvoices.length;
+              const pages = Math.ceil(total / itemsPerPage) || 1;
+              if (total <= itemsPerPage) return null;
+              const start = (currentPage - 1) * itemsPerPage;
+
+              return (
+                <div className="p-4 border-t border-border bg-secondary/15 flex items-center justify-between gap-4 text-xs font-semibold text-muted-foreground select-none">
+                  <span>
+                    Showing {start + 1} to {Math.min(start + itemsPerPage, total)} of {total} invoices
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 border border-border bg-card rounded-lg hover:bg-secondary disabled:opacity-40 transition-all cursor-pointer"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(pages, prev + 1))}
+                      disabled={currentPage === pages}
+                      className="px-3 py-1.5 border border-border bg-card rounded-lg hover:bg-secondary disabled:opacity-40 transition-all cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </>
       ) : (

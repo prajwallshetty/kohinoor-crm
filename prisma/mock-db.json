@@ -228,7 +228,18 @@
     "totalQuotaBytes": 10737418240,
     "usedBytes": 0
   },
-  "quotationMeta": {},
+  "quotationMeta": {
+    "q-1785818510903": {
+      "quotationDate": "2026-08-04",
+      "bookNumber": "Book 1",
+      "templateId": "ce92981b-e6ee-4412-8ccb-6ab560e61890",
+      "templateName": "Normal Shutter",
+      "templateVersion": null,
+      "templateSnapshotJson": null,
+      "specJson": null,
+      "formulaResultsJson": null
+    }
+  },
   "masterItems": [
     {
       "id": "mi-0",
@@ -1119,6 +1130,96 @@
       "isDisabled": false,
       "createdAt": "2026-08-03T17:20:10.656Z",
       "updatedAt": "2026-08-03T17:20:10.656Z"
+    },
+    {
+      "id": "mi-add-0-1785818056525",
+      "category": "Bottom Plate",
+      "name": "GI Bottom Plate",
+      "rate": 120,
+      "unit": "Ft",
+      "isDisabled": false,
+      "createdAt": "2026-08-04T04:34:16.525Z",
+      "updatedAt": "2026-08-04T04:34:16.525Z"
+    },
+    {
+      "id": "mi-add-1-1785818056525",
+      "category": "Bottom Plate",
+      "name": "MS Bottom Plate",
+      "rate": 95,
+      "unit": "Ft",
+      "isDisabled": false,
+      "createdAt": "2026-08-04T04:34:16.525Z",
+      "updatedAt": "2026-08-04T04:34:16.525Z"
+    },
+    {
+      "id": "mi-add-2-1785818056525",
+      "category": "Bottom Plate",
+      "name": "Heavy MS Angle Bottom Plate",
+      "rate": 150,
+      "unit": "Ft",
+      "isDisabled": false,
+      "createdAt": "2026-08-04T04:34:16.525Z",
+      "updatedAt": "2026-08-04T04:34:16.525Z"
+    },
+    {
+      "id": "mi-add-3-1785818056525",
+      "category": "Spring 1",
+      "name": "Standard Spring 1",
+      "rate": 220,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-08-04T04:34:16.525Z",
+      "updatedAt": "2026-08-04T04:34:16.525Z"
+    },
+    {
+      "id": "mi-add-4-1785818056525",
+      "category": "Spring 1",
+      "name": "Heavy Spring 1",
+      "rate": 350,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-08-04T04:34:16.525Z",
+      "updatedAt": "2026-08-04T04:34:16.525Z"
+    },
+    {
+      "id": "mi-add-5-1785818056525",
+      "category": "Spring 2",
+      "name": "Standard Spring 2",
+      "rate": 280,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-08-04T04:34:16.525Z",
+      "updatedAt": "2026-08-04T04:34:16.525Z"
+    },
+    {
+      "id": "mi-add-6-1785818056525",
+      "category": "Spring 2",
+      "name": "Heavy Spring 2",
+      "rate": 420,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-08-04T04:34:16.525Z",
+      "updatedAt": "2026-08-04T04:34:16.525Z"
+    },
+    {
+      "id": "mi-add-7-1785818056525",
+      "category": "Spring 3",
+      "name": "Standard Spring 3",
+      "rate": 340,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-08-04T04:34:16.525Z",
+      "updatedAt": "2026-08-04T04:34:16.525Z"
+    },
+    {
+      "id": "mi-add-8-1785818056525",
+      "category": "Spring 3",
+      "name": "Heavy Spring 3",
+      "rate": 520,
+      "unit": "Pcs",
+      "isDisabled": false,
+      "createdAt": "2026-08-04T04:34:16.525Z",
+      "updatedAt": "2026-08-04T04:34:16.525Z"
     }
   ],
   "quotationTemplates": [

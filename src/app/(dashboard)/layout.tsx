@@ -30,7 +30,7 @@ export default function DashboardLayout({
       case "/quotations": return "Quotation Builder & PDF Generation";
       case "/invoices":   return "Invoice Ledger";
       case "/payments":   return "Payments Ledger & UPI Ledger";
-      case "/master-data":return "Master Data";
+      case "/master-data":return "Master Data & Inventory";
       case "/admin":      return "Admin Console & Branding Templates";
       default:            return "Kohinoor Rolling Shutters CRM";
     }
@@ -41,10 +41,11 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="pl-64 flex flex-col min-w-0 min-h-screen">
         <Navbar title={getPageTitle(pathname)} />
-        <main className="flex-1 p-8 relative">
+        <main className="flex-1 p-6 relative">
           {children}
         </main>
       </div>
     </div>
   );
 }
+

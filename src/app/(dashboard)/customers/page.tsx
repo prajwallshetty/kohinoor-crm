@@ -40,6 +40,13 @@ export default function CustomersPage() {
   const { user } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -169,6 +176,11 @@ export default function CustomersPage() {
     c.phone.includes(search)
   );
 
+  const totalItems = filteredCustomers.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedCustomers = filteredCustomers.slice(startIndex, startIndex + itemsPerPage);
+
   if (loading) return <PageSkeleton rows={5} />;
 
   return (
@@ -213,12 +225,12 @@ export default function CustomersPage() {
             </h3>
           </div>
           <div className="overflow-y-auto flex-1 divide-y divide-border/60">
-            {filteredCustomers.length === 0 ? (
+            {paginatedCustomers.length === 0 ? (
               <div className="p-8 text-center text-xs text-muted-foreground">
                 No customer profiles match.
               </div>
             ) : (
-              filteredCustomers.map((cust) => (
+              paginatedCustomers.map((cust) => (
                 <div
                   key={cust.id}
                   onClick={() => setSelectedCustomer(cust)}
@@ -237,6 +249,28 @@ export default function CustomersPage() {
               ))
             )}
           </div>
+          {/* Pagination Footer */}
+          {totalItems > itemsPerPage && (
+            <div className="p-3 border-t border-border bg-secondary/15 flex items-center justify-between gap-2 text-[10px] font-bold text-muted-foreground">
+              <span>Page {currentPage} of {totalPages}</span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 border border-border bg-card rounded hover:bg-secondary disabled:opacity-40 transition-all cursor-pointer"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1 border border-border bg-card rounded hover:bg-secondary disabled:opacity-40 transition-all cursor-pointer"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Detail sheet */}

@@ -624,6 +624,7 @@ export const DataService = {
   },
 
   async updateQuotationStatus(id: string, status: QuoteStatus) {
+    await ensureDbConnection();
     if (isDbConnected) {
       try {
         const quote = await prisma.quotation.update({
@@ -644,6 +645,122 @@ export const DataService = {
       this.logAction("u-1", "owner@kohinoor.com", "QUOTATION_STATUS", `Quotation ${id} set to ${status}`);
       
       return db.quotations[idx];
+    }
+    return null;
+  },
+
+  async updateQuotation(id: string, payload: any) {
+    await ensureDbConnection();
+    const { discount, gstAmount, totalAmount, terms, items } = payload;
+
+    if (isDbConnected) {
+      try {
+        // Delete all existing items
+        await prisma.quotationItem.deleteMany({
+          where: { quotationId: id }
+        });
+
+        // Update the main quotation record
+        await prisma.quotation.update({
+          where: { id },
+          data: {
+            discount: discount !== undefined ? parseFloat(discount) : undefined,
+            gstAmount: gstAmount !== undefined ? parseFloat(gstAmount) : undefined,
+            totalAmount: totalAmount !== undefined ? parseFloat(totalAmount) : undefined,
+            terms: terms !== undefined ? terms : undefined,
+            updatedAt: new Date(),
+          }
+        });
+
+        // Insert new items
+        if (items && items.length > 0) {
+          await prisma.quotationItem.createMany({
+            data: items.map((item: any) => ({
+              quotationId: id,
+              productName: item.productName || "Custom Item",
+              materialCategory: item.materialCategory || null,
+              material: item.material || null,
+              thickness: item.thickness || null,
+              profile: item.profile || null,
+              length: item.length !== undefined && item.length !== null ? parseFloat(item.length) : null,
+              width: item.width !== undefined && item.width !== null ? parseFloat(item.width) : null,
+              quantity: parseInt(item.quantity || 1),
+              unitPrice: parseFloat(item.unitPrice || 0),
+              lineTotal: parseFloat(item.lineTotal || 0),
+              shutterName: item.shutterName || null,
+              height: item.height !== undefined && item.height !== null ? parseFloat(item.height) : null,
+              color: item.color || null,
+              operationType: item.operationType || null,
+              motorType: item.motorType || null,
+              categoryId: item.categoryId || null,
+              configJson: item.configJson || null,
+              unit: item.unit || null,
+            }))
+          });
+        }
+
+        const result = await prisma.quotation.findUnique({
+          where: { id },
+          include: {
+            customer: true,
+            items: true,
+          }
+        });
+        return result;
+      } catch (e: any) {
+        console.error("Database updateQuotation error: ", e);
+        throw e;
+      }
+    }
+
+    // Fallback: Mock DB
+    const db = readMockDb();
+    const idx = db.quotations.findIndex(q => q.id === id);
+    if (idx !== -1) {
+      if (discount !== undefined) db.quotations[idx].discount = parseFloat(discount);
+      if (gstAmount !== undefined) db.quotations[idx].gstAmount = parseFloat(gstAmount);
+      if (totalAmount !== undefined) db.quotations[idx].totalAmount = parseFloat(totalAmount);
+      if (terms !== undefined) db.quotations[idx].terms = terms;
+      db.quotations[idx].updatedAt = new Date().toISOString();
+
+      // Filter out existing items for this quotation
+      db.quotationItems = db.quotationItems.filter(i => i.quotationId !== id);
+
+      // Insert new items
+      const addedItems = (items || []).map((item: any, iIdx: number) => {
+        const shutterId = `item-${Date.now()}-${iIdx}`;
+        const qitem = {
+          id: shutterId,
+          quotationId: id,
+          productName: item.productName || "Custom Item",
+          materialCategory: item.materialCategory || null,
+          material: item.material || null,
+          thickness: item.thickness || null,
+          profile: item.profile || null,
+          length: item.length !== undefined && item.length !== null ? parseFloat(item.length) : null,
+          width: item.width !== undefined && item.width !== null ? parseFloat(item.width) : null,
+          quantity: parseInt(item.quantity || 1),
+          unitPrice: parseFloat(item.unitPrice || 0),
+          lineTotal: parseFloat(item.lineTotal || 0),
+          shutterName: item.shutterName || null,
+          height: item.height !== undefined && item.height !== null ? parseFloat(item.height) : null,
+          color: item.color || null,
+          operationType: item.operationType || null,
+          motorType: item.motorType || null,
+          categoryId: item.categoryId || null,
+          configJson: item.configJson || null,
+          unit: item.unit || null,
+          bomItems: [] as any[]
+        };
+        db.quotationItems.push(qitem);
+        return qitem;
+      });
+
+      writeMockDb(db);
+      this.logAction("u-1", "owner@kohinoor.com", "QUOTATION_UPDATE", `Updated quotation number: ${db.quotations[idx].quoteNumber}`);
+      
+      const customer = db.customers.find(c => c.id === db.quotations[idx].customerId);
+      return { ...db.quotations[idx], customer, items: addedItems };
     }
     return null;
   },
@@ -1366,6 +1483,18 @@ export const DataService = {
         if (count === 0) {
           await prisma.masterItem.createMany({ data: seedMasterItems });
         } else {
+          // Seed Bottom Plate & Spring 1,2,3 if they are empty
+          const bottomPlateExists = await prisma.masterItem.findFirst({ where: { category: "Bottom Plate" } });
+          if (!bottomPlateExists) {
+            const additionalSeeds = seedMasterItems.filter(item => 
+              item.category === "Bottom Plate" || 
+              item.category === "Spring 1" || 
+              item.category === "Spring 2" || 
+              item.category === "Spring 3"
+            );
+            await prisma.masterItem.createMany({ data: additionalSeeds });
+          }
+
           const exists = await prisma.masterItem.findFirst({ where: { category: "Gate Material", name: "Standard Gate" } });
           if (!exists) {
             await prisma.masterItem.createMany({
@@ -1384,9 +1513,33 @@ export const DataService = {
       db.masterItems = [...seedMasterItems.map((item, idx) => ({ id: `mi-${idx}`, ...item, isDisabled: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }))];
       writeMockDb(db);
     } else {
-      const exists = db.masterItems.find((mi: any) => mi.category === "Gate Material" && mi.name === "Standard Gate");
+      // Check if Bottom Plate exists in mock db
+      if (!db.masterItems) db.masterItems = [];
+      const masterItems: any[] = db.masterItems;
+
+      const bottomPlateExists = masterItems.some((mi: any) => mi.category === "Bottom Plate");
+      if (!bottomPlateExists) {
+        const additionalSeeds = seedMasterItems.filter(item => 
+          item.category === "Bottom Plate" || 
+          item.category === "Spring 1" || 
+          item.category === "Spring 2" || 
+          item.category === "Spring 3"
+        );
+        additionalSeeds.forEach((item, idx) => {
+          masterItems.push({
+            id: `mi-add-${idx}-${Date.now()}`,
+            ...item,
+            isDisabled: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        });
+        writeMockDb(db);
+      }
+
+      const exists = masterItems.find((mi: any) => mi.category === "Gate Material" && mi.name === "Standard Gate");
       if (!exists) {
-        db.masterItems.push(
+        masterItems.push(
           {
             id: `mi-gm-${Date.now()}`,
             category: "Material Categories",
@@ -1723,11 +1876,24 @@ const seedMasterItems = [
   { category: "Profiles", name: "Half Round", rate: 0.0, unit: "Pcs" },
   { category: "Profiles", name: "Round", rate: 0.0, unit: "Pcs" },
 
+  // 4b. Bottom Plate
+  { category: "Bottom Plate", name: "GI Bottom Plate", rate: 120.0, unit: "Ft" },
+  { category: "Bottom Plate", name: "MS Bottom Plate", rate: 95.0, unit: "Ft" },
+  { category: "Bottom Plate", name: "Heavy MS Angle Bottom Plate", rate: 150.0, unit: "Ft" },
+
   // 5. Springs
   { category: "Springs", name: "SPR 4G", rate: 150.0, unit: "PCS" },
   { category: "Springs", name: "SPR 5G", rate: 186.0, unit: "PCS" },
   { category: "Springs", name: "SPR 6G", rate: 220.0, unit: "PCS" },
   { category: "Springs", name: "SPR 7G", rate: 260.0, unit: "PCS" },
+
+  // 5b. Spring 1, 2, 3
+  { category: "Spring 1", name: "Standard Spring 1", rate: 220.0, unit: "Pcs" },
+  { category: "Spring 1", name: "Heavy Spring 1", rate: 350.0, unit: "Pcs" },
+  { category: "Spring 2", name: "Standard Spring 2", rate: 280.0, unit: "Pcs" },
+  { category: "Spring 2", name: "Heavy Spring 2", rate: 420.0, unit: "Pcs" },
+  { category: "Spring 3", name: "Standard Spring 3", rate: 340.0, unit: "Pcs" },
+  { category: "Spring 3", name: "Heavy Spring 3", rate: 520.0, unit: "Pcs" },
 
   // 6. Brackets
   { category: "Brackets", name: "13/16", rate: 350.0, unit: "PCS" },

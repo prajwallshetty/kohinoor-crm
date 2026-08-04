@@ -23,11 +23,15 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const { status } = await request.json();
-    const updated = await DataService.updateQuotationStatus(id, status as QuoteStatus);
+    const body = await request.json();
+    if (body.status !== undefined && Object.keys(body).length === 1) {
+      const updated = await DataService.updateQuotationStatus(id, body.status as QuoteStatus);
+      return NextResponse.json(updated);
+    }
+    const updated = await DataService.updateQuotation(id, body);
     return NextResponse.json(updated);
   } catch (e) {
-    return NextResponse.json({ error: "Failed to update quotation status" }, { status: 400 });
+    return NextResponse.json({ error: "Failed to update quotation" }, { status: 400 });
   }
 }
 

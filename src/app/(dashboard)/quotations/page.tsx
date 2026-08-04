@@ -12,6 +12,7 @@ import QRCode from "qrcode";
 import { generateAndSharePDF } from "@/lib/share-pdf";
 import { generateQuotation, type QuotationTemplate } from "@/lib/rule-engine";
 import { SearchableSelect, type SelectOption } from "@/components/ui/searchable-select";
+import { QuotationSpreadsheet } from "@/components/quotations/QuotationSpreadsheet";
 
 interface Customer {
   id: string;
@@ -76,6 +77,24 @@ interface GenLine {
   formula: string;
   formulaResult: number;
   editable: boolean;
+
+  // Configurable attributes for inline editing
+  width?: number;
+  height?: number;
+  material?: string;
+  thickness?: string;
+  profile?: string;
+  pipeSize?: string;
+  springType?: string;
+  wheelSize?: string;
+  bracketVariant?: string;
+  guideChannelVariant?: string;
+  kabadiSize?: string;
+  topCoverSize?: string;
+  handleQty?: number;
+  lockQty?: number;
+  fittingsQty?: number;
+  notes?: string;
 }
 
 const BOOK_NUMBER_OPTIONS: SelectOption[] = [
@@ -83,6 +102,174 @@ const BOOK_NUMBER_OPTIONS: SelectOption[] = [
   { value: "Book 2", label: "Book 2" },
   { value: "Book 3", label: "Book 3" },
 ];
+
+const formatDateDMY = (dateStr: string) => {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+const getBookCode = (book?: string) => {
+  if (!book) return "B1";
+  if (book.includes("2")) return "B2";
+  if (book.includes("3")) return "B3";
+  return "B1";
+};
+
+const getItemDescription = (item: any) => {
+  if (!item) return "";
+  // If description is already a formatted string, use it
+  if (item.shutterName && item.shutterName.length > 10) {
+    return item.shutterName;
+  }
+  if (item.description && item.description.length > 10) {
+    return item.description;
+  }
+
+  const w = item.width || 0;
+  const h = item.height || 0;
+  const qty = item.quantity || 1;
+  const mat = item.material || "GI";
+  const thick = item.thickness || "18G";
+  const prof = item.profile || "Flat";
+  const name = item.productName || "Item";
+
+  const nameLower = name.toLowerCase();
+
+  if (nameLower === "gi" || nameLower.includes("sheet") || nameLower.includes("slat")) {
+    return `${w} * ${h} GI (${thick}-${prof})`;
+  }
+  if (nameLower === "bp" || nameLower.includes("bottom plate")) {
+    return `${w} * ${qty} BP`;
+  }
+  if (nameLower === "pipe") {
+    let pipeSize = "1½\"";
+    if (item.configJson) {
+      try {
+        const config = JSON.parse(item.configJson);
+        if (config.pipeSize) pipeSize = config.pipeSize;
+      } catch (e) {}
+    }
+    return `${w} * ${qty} PIPE (${pipeSize})`;
+  }
+  if (nameLower === "gc" || nameLower.includes("guide")) {
+    return `${h} * ${qty} GC`;
+  }
+  if (nameLower.includes("spring")) {
+    let springType = "SPR 5G";
+    if (item.configJson) {
+      try {
+        const config = JSON.parse(item.configJson);
+        if (config.springType) springType = config.springType;
+      } catch (e) {}
+    }
+    return `${springType} - ${qty} PCS`;
+  }
+  if (nameLower.includes("bracket")) {
+    let bracket = "13/16";
+    if (item.configJson) {
+      try {
+        const config = JSON.parse(item.configJson);
+        if (config.bracketVariant) bracket = config.bracketVariant;
+      } catch (e) {}
+    }
+    return `BRACKET ${bracket} - ${qty} PCS`;
+  }
+  if (nameLower.includes("wheel")) {
+    let wheel = "1½\"";
+    if (item.configJson) {
+      try {
+        const config = JSON.parse(item.configJson);
+        if (config.wheelSize) wheel = config.wheelSize;
+      } catch (e) {}
+    }
+    return `WHEEL ${wheel} - ${qty} PCS`;
+  }
+  if (nameLower.includes("kabadi")) {
+    return `${w} * ${qty} KABADI (${thick}-${mat}-${prof})`;
+  }
+  if (nameLower.includes("lock")) {
+    let lockVar = "Standard";
+    if (item.configJson) {
+      try {
+        const config = JSON.parse(item.configJson);
+        if (config.lockVariant) lockVar = config.lockVariant;
+      } catch (e) {}
+    }
+    return `LOCK SET (${lockVar}) - ${qty} PCS`;
+  }
+  if (nameLower.includes("handle")) {
+    let handleVar = "MS";
+    if (item.configJson) {
+      try {
+        const config = JSON.parse(item.configJson);
+        if (config.handleVariant) handleVar = config.handleVariant;
+      } catch (e) {}
+    }
+    return `HANDLE ${handleVar} - ${qty} PCS`;
+  }
+  if (nameLower.includes("top cover") || nameLower.includes("hood")) {
+    let coverSize = "4\"";
+    if (item.configJson) {
+      try {
+        const config = JSON.parse(item.configJson);
+        if (config.topCoverSize) coverSize = config.topCoverSize;
+      } catch (e) {}
+    }
+    return `${w} * ${qty} TOP COVER (${coverSize})`;
+  }
+  if (nameLower.includes("fittings")) {
+    let fittingsVar = "Basic";
+    if (item.configJson) {
+      try {
+        const config = JSON.parse(item.configJson);
+        if (config.fittingsVariant) fittingsVar = config.fittingsVariant;
+      } catch (e) {}
+    }
+    return `FITTINGS (${fittingsVar}) - ${qty} PCS`;
+  }
+
+  return item.shutterName || item.description || item.productName || "";
+};
+
+const renderDescription = (text: string) => {
+  if (!text) return null;
+  
+  // Match dimension patterns like "120 × 84", "120 × 1", "84 × 2" at the start
+  const regex = /^([\d\.\s\"\'\/¼½¾⅛\-]+(?:\u00d7|x|\*)\s*[\d\.\s\"\'\/¼½¾⅛\-]+)/i;
+  const match = text.match(regex);
+  
+  if (match) {
+    const dimension = match[1];
+    const rest = text.substring(dimension.length);
+    return (
+      <>
+        <span className="font-bold text-slate-900">{dimension}</span>
+        <span className="font-normal text-slate-500">{rest}</span>
+      </>
+    );
+  }
+  
+  const index = text.indexOf("(");
+  if (index === -1) {
+    return <span className="font-normal text-slate-800">{text}</span>;
+  }
+  const highlight = text.substring(0, index).trim();
+  const rest = text.substring(index);
+  return (
+    <>
+      <span className="font-bold text-slate-900">{highlight}</span>{" "}
+      <span className="font-normal text-slate-500">{rest}</span>
+    </>
+  );
+};
 
 export default function QuotationsPage() {
   const { user } = useAuth();
@@ -93,6 +280,13 @@ export default function QuotationsPage() {
   const [branding, setBranding] = useState<any>(null);
 
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   const [loading, setLoading] = useState(true);
   const [selectedQuote, setSelectedQuote] = useState<Quotation | null>(null);
   const [printType, setPrintType] = useState<"normal" | "bold_gaps" | "spring_handle">("normal");
@@ -150,6 +344,8 @@ export default function QuotationsPage() {
   // Generated Items & Results
   const [generated, setGenerated] = useState(false);
   const [genLines, setGenLines] = useState<GenLine[]>([]);
+  const [isManuallyEdited, setIsManuallyEdited] = useState(false);
+  const [isUpdatingQuote, setIsUpdatingQuote] = useState(false);
   const [genWarnings, setGenWarnings] = useState<string[]>([]);
   const [notification, setNotification] = useState("");
 
@@ -162,11 +358,11 @@ export default function QuotationsPage() {
     if (showLoading) setLoading(true);
     try {
       const [qRes, cRes, mRes, tRes, bRes] = await Promise.all([
-        fetch("/api/quotations"),
-        fetch("/api/customers"),
-        fetch("/api/master-data"),
-        fetch("/api/quotation-templates"),
-        fetch("/api/admin/branding"),
+        fetch("/api/quotations", { cache: "no-store" }),
+        fetch("/api/customers", { cache: "no-store" }),
+        fetch("/api/master-data", { cache: "no-store" }),
+        fetch("/api/quotation-templates", { cache: "no-store" }),
+        fetch("/api/admin/branding", { cache: "no-store" }),
       ]);
       const [qData, cData, mData, tData, bData] = await Promise.all([
         qRes.ok ? qRes.json() : [],
@@ -193,7 +389,12 @@ export default function QuotationsPage() {
 
   useEffect(() => {
     if (selectedQuote) {
-      setPrintItems(selectedQuote.items || []);
+      const itemsWithDesc = (selectedQuote.items || []).map((item: any) => ({
+        ...item,
+        shutterName: getItemDescription(item),
+        description: item.description || getItemDescription(item),
+      }));
+      setPrintItems(itemsWithDesc);
     } else {
       setPrintItems([]);
     }
@@ -276,6 +477,7 @@ export default function QuotationsPage() {
   const resetCreateForm = () => {
     setGenerated(false);
     setGenLines([]);
+    setIsManuallyEdited(false);
     setGenWarnings([]);
     setFormCustId("");
     setIsNewCustomer(false);
@@ -542,21 +744,49 @@ export default function QuotationsPage() {
       }
     }
 
-    setGenLines(lines);
+    const initializedLines = lines.map((l) => ({
+      ...l,
+      width: l.width ?? (parseFloat(specWidth) || 0),
+      height: l.height ?? (parseFloat(specHeight) || 0),
+      material: l.material ?? specSheetMaterial,
+      thickness: l.thickness ?? specThickness,
+      profile: l.profile ?? specProfile,
+      pipeSize: l.pipeSize ?? specPipe,
+      springType: l.springType ?? specSpring1,
+      wheelSize: l.wheelSize ?? specWheel,
+      bracketVariant: l.bracketVariant ?? specBracket,
+      guideChannelVariant: l.guideChannelVariant ?? specGuideChannel,
+      kabadiSize: l.kabadiSize ?? specKabadi,
+      topCoverSize: l.topCoverSize ?? specTopCover,
+      handleQty: l.handleQty ?? (parseInt(specHandle) || 0),
+      lockQty: l.lockQty ?? (parseInt(specLockSet) || 0),
+      fittingsQty: l.fittingsQty ?? (parseInt(specFittings) || 0),
+      notes: l.notes ?? "",
+    }));
+
+    setGenLines(initializedLines);
     setGenerated(true);
     triggerToast("Quotation generated successfully!");
   };
 
+  const handleForceGenerate = () => {
+    setIsManuallyEdited(false);
+    setTimeout(() => {
+      handleGenerate();
+    }, 0);
+  };
+
   // Live Auto-generate preview on input change
   useEffect(() => {
-    if (showAddQuote) {
+    if (showAddQuote && !isManuallyEdited) {
       handleGenerate();
     }
   }, [
     showAddQuote, selectedTemplateId, specWidth, specHeight, specQty,
     specSheetMaterial, specThickness, specProfile, specBottomPlate, specPipe,
     specGuideChannel, specSpring1, specSpring2, specSpring3, specBracket,
-    specWheel, specKabadi, specHandle, specLockSet, specFittings, specMotor, specTopCover
+    specWheel, specKabadi, specHandle, specLockSet, specFittings, specMotor, specTopCover,
+    isManuallyEdited
   ]);
 
   // Financial Calculations
@@ -624,30 +854,45 @@ export default function QuotationsPage() {
 
       const tpl = templates.find((t) => t.id === selectedTemplateId);
       const payload = {
-        customerId: activeCustId,
-        quotationDate,
-        bookNumber,
-        status: formStatus,
-        discount: discVal,
-        gstRate: gstRateVal,
-        gstAmount: gstAmt,
-        totalAmount: grandTotal,
-        terms: formTerms,
-        templateId: tpl?.id || null,
-        templateName: tpl?.name || "Normal Shutter",
+        quotation: {
+          customerId: activeCustId,
+          quotationDate,
+          bookNumber,
+          status: formStatus,
+          discount: discVal,
+          gstRate: gstRateVal,
+          gstAmount: gstAmt,
+          totalAmount: grandTotal,
+          terms: formTerms,
+          templateId: tpl?.id || null,
+          templateName: tpl?.name || "Normal Shutter",
+        },
         items: genLines.map((l) => ({
           productName: l.productName,
           materialCategory: l.materialCategory,
-          material: specSheetMaterial,
-          thickness: specThickness,
-          profile: specProfile,
-          width: parseFloat(specWidth) || 0,
-          height: parseFloat(specHeight) || 0,
-          shutterName: l.variant,
+          material: l.material || specSheetMaterial,
+          thickness: l.thickness || specThickness,
+          profile: l.profile || specProfile,
+          width: l.width ?? (parseFloat(specWidth) || 0),
+          height: l.height ?? (parseFloat(specHeight) || 0),
+          shutterName: l.description,
           quantity: l.quantity,
           unit: l.unit,
           unitPrice: l.unitPrice,
           lineTotal: l.lineTotal,
+          configJson: JSON.stringify({
+            pipeSize: l.pipeSize,
+            springType: l.springType,
+            wheelSize: l.wheelSize,
+            bracketVariant: l.bracketVariant,
+            guideChannelVariant: l.guideChannelVariant,
+            kabadiSize: l.kabadiSize,
+            topCoverSize: l.topCoverSize,
+            handleQty: l.handleQty,
+            lockQty: l.lockQty,
+            fittingsQty: l.fittingsQty,
+            notes: l.notes,
+          }),
         })),
       };
 
@@ -679,6 +924,96 @@ export default function QuotationsPage() {
     setTimeout(() => {
       document.body.classList.remove("print-half-a4");
     }, 1000);
+  };
+
+  const handleApproveQuotation = async () => {
+    if (!selectedQuote) return;
+    if (!confirm(`Are you sure you want to APPROVE quotation ${selectedQuote.quoteNumber}?`)) return;
+
+    try {
+      const res = await fetch(`/api/quotations/${selectedQuote.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "APPROVED" }),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setSelectedQuote(updated);
+        triggerToast("Quotation approved successfully!");
+        fetchData(false);
+      } else {
+        alert("Failed to approve quotation");
+      }
+    } catch (e) {
+      alert("Error approving quotation.");
+    }
+  };
+
+  const handleUpdateSavedQuotation = async () => {
+    if (!selectedQuote || isUpdatingQuote) return;
+    setIsUpdatingQuote(true);
+    try {
+      const sub = printItems.reduce((s, i) => s + (i.lineTotal || 0), 0);
+      const discount = selectedQuote.discount || 0;
+      const gstRateVal = selectedQuote.gstRate || 0;
+      const taxable = Math.max(0, sub - discount);
+      const gstAmt = Math.round(taxable * (gstRateVal / 100));
+      const totalAmt = Math.round(taxable + gstAmt);
+
+      const payload = {
+        discount,
+        gstAmount: gstAmt,
+        totalAmount: totalAmt,
+        terms: selectedQuote.terms,
+        items: printItems.map((item: any) => ({
+          productName: item.productName || "Custom Item",
+          materialCategory: item.materialCategory || null,
+          material: item.material || null,
+          thickness: item.thickness || null,
+          profile: item.profile || null,
+          width: item.width !== undefined && item.width !== null ? parseFloat(item.width) : null,
+          height: item.height !== undefined && item.height !== null ? parseFloat(item.height) : null,
+          shutterName: item.shutterName || item.description || item.productName || null,
+          quantity: parseInt(item.quantity || 1),
+          unitPrice: parseFloat(item.unitPrice || 0),
+          lineTotal: parseFloat(item.lineTotal || 0),
+          unit: item.unit || "Pcs",
+          configJson: item.configJson || (item.pipeSize || item.springType || item.notes ? JSON.stringify({
+            pipeSize: item.pipeSize,
+            springType: item.springType,
+            wheelSize: item.wheelSize,
+            bracketVariant: item.bracketVariant,
+            guideChannelVariant: item.guideChannelVariant,
+            kabadiSize: item.kabadiSize,
+            topCoverSize: item.topCoverSize,
+            handleQty: item.handleQty,
+            lockQty: item.lockQty,
+            fittingsQty: item.fittingsQty,
+            notes: item.notes,
+          }) : null),
+        }))
+      };
+
+      const res = await fetch(`/api/quotations/${selectedQuote.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        triggerToast("Quotation updated successfully!");
+        setSelectedQuote(updated);
+        fetchData(false);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to update quotation");
+      }
+    } catch (e) {
+      alert("Error updating quotation");
+    }
+    setIsUpdatingQuote(false);
   };
 
   const activeCustomerObj = customers.find((c) => c.id === formCustId);
@@ -976,7 +1311,7 @@ export default function QuotationsPage() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={handleGenerate}
+                      onClick={handleForceGenerate}
                       className="bg-secondary hover:bg-secondary/80 text-foreground font-bold text-xs py-2 px-3 rounded-xl border border-border cursor-pointer transition-all flex items-center gap-1.5"
                     >
                       <RefreshCw className="w-3.5 h-3.5 text-primary" />
@@ -1014,465 +1349,271 @@ export default function QuotationsPage() {
               </div>
 
               {/* Exact Company Printed Quotation Format */}
-              <div className="quotation-a5-print bg-white text-slate-900 p-6 rounded-xl shadow-2xl border border-slate-300 font-mono text-[11px] leading-tight">
+              <div className="quotation-a5-print">
                 {/* Header */}
-                <div className="border-b-2 border-slate-900 pb-3 mb-3 text-center">
-                  <h2 className="text-base font-black tracking-tight text-slate-950 uppercase">
-                    {branding?.companyName || "KOHINOOR ROLLING SHUTTERS"}
-                  </h2>
-                  <p className="text-[10px] text-slate-700">Manufacturers of All Types of Rolling Shutters & Accessories</p>
-                  <p className="text-[9px] text-slate-600">Plot 42, GIDC Industrial Estate, Thane, Maharashtra | GST: {branding?.gstNumber || "27AAACK5912K1Z9"}</p>
+                <div className="text-center mb-2">
+                  <div className="font-bold tracking-widest text-[11px]">QUOTATION</div>
+                  <div>---------</div>
                 </div>
 
-                {/* Document Title */}
-                <div className="flex justify-between items-center border-b border-slate-300 pb-2 mb-3">
-                  <span className="text-sm font-black tracking-widest text-slate-900 uppercase">QUOTATION</span>
-                  <span className="text-[10px] font-bold text-slate-700">{bookNumber}</span>
+                <div className="my-1">--------------------------------------------------</div>
+                
+                {/* Customer line */}
+                <div className="font-bold">
+                  CUSTOMER : {displayCustomerName.toUpperCase()} ({getBookCode(bookNumber)})
+                </div>
+                
+                <div className="my-1">--------------------------------------------------</div>
+
+                {/* Columns Header */}
+                <div className="flex justify-between font-bold">
+                  <span>DESCRIPTION</span>
+                  <span>AMOUNT</span>
                 </div>
 
-                {/* Customer Details */}
-                <div className="grid grid-cols-2 gap-2 border border-slate-300 p-2 rounded mb-3 text-[10px]">
-                  <div>
-                    <span className="text-[8px] uppercase text-slate-500 font-bold block">CUSTOMER</span>
-                    <p className="font-bold text-slate-950">{displayCustomerName}</p>
-                    <p className="text-slate-700">{isNewCustomer ? newCustBilling : activeCustomerObj?.billingAddress || "Billing Address"}</p>
-                    <p className="text-slate-700">Ph: {isNewCustomer ? newCustPhone : activeCustomerObj?.phone || "--"}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[8px] uppercase text-slate-500 font-bold block">DETAILS</span>
-                    <p className="text-slate-800">Date: {quotationDate}</p>
-                    <p className="text-slate-800">Template: {templates.find(t => t.id === selectedTemplateId)?.name || "Normal Shutter"}</p>
-                    <p className="text-slate-800">Size: {specWidth}" × {specHeight}" ({specQty} PCS)</p>
-                  </div>
+                <div className="my-1">--------------------------------------------------</div>
+
+                {/* Date Section */}
+                <div className="mb-2">
+                  <div>{formatDateDMY(quotationDate)}</div>
+                  <div>----------</div>
                 </div>
 
-                {/* Itemized Material Table */}
-                <table className="w-full text-left border-collapse mb-3">
-                  <thead>
-                    <tr className="border-y border-slate-900 text-[9px] font-bold uppercase">
-                      <th className="py-1">No</th>
-                      <th className="py-1">Description</th>
-                      <th className="py-1 text-center">Qty</th>
-                      <th className="py-1 text-right">Rate</th>
-                      <th className="py-1 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {genLines.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-4 text-center text-slate-400 italic">
-                          Selecting template & variants auto-generates quote...
-                        </td>
-                      </tr>
-                    ) : (
-                      genLines.map((line, idx) => (
-                        <tr key={idx} className="text-[10px]">
-                          <td className="py-1 text-slate-500">{idx + 1}</td>
-                          <td className="py-1">
-                            <span className="font-bold text-slate-950 block">{line.productName}</span>
-                            <span className="text-[9px] text-slate-600 block">{line.description}</span>
-                          </td>
-                          <td className="py-1 text-center text-slate-800">{line.quantity} {line.unit}</td>
-                          <td className="py-1 text-right text-slate-800">₹{line.unitPrice}</td>
-                          <td className="py-1 text-right font-bold text-slate-950">₹{line.lineTotal.toLocaleString("en-IN")}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-
-                {/* Totals Section */}
-                <div className="flex justify-end border-t border-slate-900 pt-2 mb-3">
-                  <div className="w-48 text-[10px] space-y-1 text-right">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Subtotal:</span>
-                      <span className="font-bold">₹{subtotal.toLocaleString("en-IN")}</span>
+                {/* Generated Items */}
+                <div className="space-y-0.5 min-h-[150px]">
+                  {genLines.length === 0 ? (
+                    <div className="text-center py-8 text-slate-450 italic font-sans text-xs">
+                      Selecting template & variants auto-generates quote...
                     </div>
-                    {discVal > 0 && (
-                      <div className="flex justify-between text-rose-600">
-                        <span>Discount:</span>
-                        <span>-₹{discVal.toLocaleString("en-IN")}</span>
+                  ) : (
+                    genLines.map((line, idx) => (
+                      <div key={idx} className="flex justify-between items-start gap-4">
+                        <span className="text-left break-words max-w-[75%]">{line.description}</span>
+                        <span className="text-right whitespace-nowrap shrink-0">
+                          {line.lineTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                       </div>
-                    )}
-                    {gstAmt > 0 && (
-                      <div className="flex justify-between">
-                        <span>GST ({gstRateVal}%):</span>
-                        <span>₹{gstAmt.toLocaleString("en-IN")}</span>
-                      </div>
-                    )}
-                    {Math.abs(roundOff) > 0 && (
-                      <div className="flex justify-between text-slate-500 text-[9px]">
-                        <span>Round Off:</span>
-                        <span>{roundOff >= 0 ? `+₹${roundOff}` : `-₹${Math.abs(roundOff)}`}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between border-t border-slate-900 pt-1 font-black text-xs text-slate-950">
-                      <span>Total:</span>
-                      <span>₹{grandTotal.toLocaleString("en-IN")}</span>
-                    </div>
-                  </div>
+                    ))
+                  )}
                 </div>
 
                 {/* Footer */}
-                <div className="grid grid-cols-2 gap-2 border-t border-slate-300 pt-2 text-[8px] text-slate-600">
-                  <div>
-                    <span className="font-bold uppercase block mb-0.5">Terms</span>
-                    <p className="whitespace-pre-line leading-tight">{formTerms}</p>
-                  </div>
-                  <div className="flex flex-col justify-end items-end text-right">
-                    <p className="font-bold text-slate-950 uppercase text-[9px]">For KOHINOOR ROLLING SHUTTERS</p>
-                    <div className="w-28 border-b border-slate-400 mt-6 pt-1 text-[8px] text-slate-500 text-center">
-                      Authorised Signatory
-                    </div>
-                  </div>
+                <div className="my-1">--------------------------------------------------</div>
+                
+                <div className="flex justify-between font-bold">
+                  <span>SUB TOTAL</span>
+                  <span>
+                    {(() => {
+                      const calculatedTotal = subtotal - discVal + gstAmt;
+                      return calculatedTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    })()}
+                  </span>
                 </div>
+                
+                <div className="flex justify-between">
+                  <span>ROUND OFF</span>
+                  {(() => {
+                    const calculatedTotal = subtotal - discVal + gstAmt;
+                    const rTotal = Math.round(calculatedTotal);
+                    const diff = rTotal - calculatedTotal;
+                    return (
+                      <span>{diff >= 0 ? "+" : ""}{diff.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    );
+                  })()}
+                </div>
+
+                <div className="my-1">--------------------------------------------------</div>
+
+                <div className="flex justify-between font-bold text-[11px]">
+                  <span>TOTAL</span>
+                  <span>{grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="my-1">--------------------------------------------------</div>
               </div>
+            </div>
+
+            {/* FULL WIDTH BOTTOM ROW: Spreadsheet Editor */}
+            <div className="lg:col-span-12 bg-card/80 border border-border/80 p-4 sm:p-5 rounded-xl shadow-lg backdrop-blur-md print-hidden print:!hidden">
+              <QuotationSpreadsheet
+                items={genLines}
+                onChange={setGenLines}
+                masterItems={masterItems}
+                onManualEdit={() => setIsManuallyEdited(true)}
+              />
             </div>
           </div>
         </div>
-      ) : selectedQuote ? (
+                ) : selectedQuote ? (
         /* SAVED QUOTATION VIEW & PRINT (HALF A4 A5) */
-        <div className="space-y-6">
-          <div className="flex justify-between items-center bg-card/60 border border-border/80 p-5 rounded-2xl print-hidden print:!hidden gap-4">
-            <button
-              onClick={() => setSelectedQuote(null)}
-              className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-            >
-              <ArrowLeft className="w-5 h-5 text-primary" />
-              <span>Back to List</span>
-            </button>
+        <div className="space-y-6 max-w-2xl mx-auto">
+          {/* CONTROL PANEL (Only visible on screen) */}
+          <div className="bg-card border border-border p-5 rounded-2xl print-hidden space-y-4 font-sans">
+            <div className="flex justify-between items-center gap-4">
+              <button
+                onClick={() => setSelectedQuote(null)}
+                className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+              >
+                <ArrowLeft className="w-5 h-5 text-primary" />
+                <span>Back to List</span>
+              </button>
 
-            {/* Print Type Selector */}
-            <div className="flex bg-secondary/60 p-1.5 border border-border/80 rounded-2xl text-sm font-sans">
-              <button
-                onClick={() => setPrintType("normal")}
-                className={`px-5 py-2.5 rounded-xl transition-all font-black text-xs uppercase tracking-wider ${
-                  printType === "normal"
-                    ? "bg-primary text-primary-foreground shadow-md animate-in fade-in duration-100"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Normal
-              </button>
-              <button
-                onClick={() => setPrintType("bold_gaps")}
-                className={`px-5 py-2.5 rounded-xl transition-all font-black text-xs uppercase tracking-wider ${
-                  printType === "bold_gaps"
-                    ? "bg-primary text-primary-foreground shadow-md animate-in fade-in duration-100"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Bold & Gaps
-              </button>
-              <button
-                onClick={() => setPrintType("spring_handle")}
-                className={`px-5 py-2.5 rounded-xl transition-all font-black text-xs uppercase tracking-wider ${
-                  printType === "spring_handle"
-                    ? "bg-primary text-primary-foreground shadow-md animate-in fade-in duration-100"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Spring to Handle
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {selectedQuote.status !== "APPROVED" && (
+                  <button
+                    onClick={handleApproveQuotation}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-lg cursor-pointer uppercase tracking-wider transition-all"
+                  >
+                    <Check className="w-5 h-5" />
+                    <span>Approve Quote</span>
+                  </button>
+                )}
+                <button
+                  onClick={handlePrintQuotation}
+                  className="bg-primary text-primary-foreground hover:bg-primary/95 text-sm font-black py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-lg cursor-pointer uppercase tracking-wider"
+                >
+                  <Printer className="w-5 h-5" />
+                  <span>Print Quotation</span>
+                </button>
+                <button
+                  onClick={handleUpdateSavedQuotation}
+                  disabled={isUpdatingQuote}
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white text-sm font-black py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-lg cursor-pointer uppercase tracking-wider transition-all"
+                >
+                  <Check className="w-5 h-5" />
+                  <span>{isUpdatingQuote ? "Saving..." : "Save Changes"}</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={handlePrintQuotation}
-                className="bg-primary text-primary-foreground hover:bg-primary/95 text-sm font-black py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-lg cursor-pointer uppercase tracking-wider"
-              >
-                <Printer className="w-5 h-5" />
-                <span>Print Quotation</span>
-              </button>
+            {/* Print Type Selector */}
+            <div className="flex justify-between items-center border-t border-border pt-4">
+              <span className="text-xs font-bold text-muted-foreground uppercase">Filter / Print Type:</span>
+              <div className="flex bg-secondary/60 p-1 border border-border/80 rounded-xl text-sm">
+                <button
+                  onClick={() => setPrintType("normal")}
+                  className={`px-4 py-2 rounded-lg transition-all font-black text-[10px] uppercase tracking-wider ${
+                    printType === "normal"
+                      ? "bg-primary text-primary-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Normal
+                </button>
+                <button
+                  onClick={() => setPrintType("bold_gaps")}
+                  className={`px-4 py-2 rounded-lg transition-all font-black text-[10px] uppercase tracking-wider ${
+                    printType === "bold_gaps"
+                      ? "bg-primary text-primary-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Bold & Gaps
+                </button>
+                <button
+                  onClick={() => setPrintType("spring_handle")}
+                  className={`px-4 py-2 rounded-lg transition-all font-black text-[10px] uppercase tracking-wider ${
+                    printType === "spring_handle"
+                      ? "bg-primary text-primary-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Spring to Handle
+                </button>
+              </div>
+            </div>
+
+            {/* Spreadsheet Editor */}
+            <div className="border-t border-border pt-4">
+              <QuotationSpreadsheet
+                items={printItems}
+                onChange={setPrintItems}
+                masterItems={masterItems}
+              />
             </div>
           </div>
 
-          <div className="quotation-a5-print bg-white text-slate-900 p-8 rounded-xl shadow-2xl border border-slate-300 max-w-2xl mx-auto w-full font-mono text-[11px]">
-            {/* Saved Quote Header */}
-            <div className="border-b-2 border-slate-900 pb-3 mb-3 text-center">
-              <h2 className="text-base font-black tracking-tight text-slate-950 uppercase">
-                {branding?.companyName || "KOHINOOR ROLLING SHUTTERS"}
-              </h2>
-              <p className="text-[10px] text-slate-700">Manufacturers of All Types of Rolling Shutters & Accessories</p>
-              <p className="text-[9px] text-slate-600">Plot 42, GIDC Industrial Estate, Thane, Maharashtra | GST: {branding?.gstNumber || "27AAACK5912K1Z9"}</p>
+          {/* PRINT PREVIEW CONTAINER (100% pixel-accurate to printing) */}
+          <div className="quotation-a5-print">
+            {/* Header */}
+            <div className="text-center mb-2">
+              <div className="font-bold tracking-widest text-[11px]">QUOTATION</div>
+              <div>---------</div>
             </div>
 
-            <div className="flex justify-between items-center border-b border-slate-300 pb-2 mb-3">
-              <span className="text-sm font-black tracking-widest text-slate-900 uppercase">QUOTATION</span>
-              <span className="text-[10px] font-bold text-slate-700">No: {selectedQuote.quoteNumber}</span>
+            <div className="my-1">--------------------------------------------------</div>
+            
+            {/* Customer line */}
+            <div className="font-bold flex justify-between items-center">
+              <div>CUSTOMER : {(selectedQuote.customer?.name || "CLIENT").toUpperCase()} ({getBookCode(selectedQuote.bookNumber)})</div>
+              {selectedQuote.status === "APPROVED" && (
+                <span className="text-[8px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.5 rounded font-sans font-bold uppercase tracking-wider print-hidden">
+                  Approved
+                </span>
+              )}
+            </div>
+            
+            <div className="my-1">--------------------------------------------------</div>
+
+            {/* Columns Header */}
+            <div className="flex justify-between font-bold">
+              <span>DESCRIPTION</span>
+              <span>AMOUNT</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 border border-slate-300 p-2 rounded mb-3 text-[10px]">
-              <div>
-                <span className="text-[8px] uppercase text-slate-500 font-bold block">CUSTOMER</span>
-                <p className="font-bold text-slate-950">{selectedQuote.customer?.name}</p>
-                <p className="text-slate-700">{selectedQuote.customer?.billingAddress}</p>
-                <p className="text-slate-700">Ph: {selectedQuote.customer?.phone}</p>
-              </div>
-              <div className="text-right">
-                <span className="text-[8px] uppercase text-slate-500 font-bold block">DETAILS</span>
-                <p className="text-slate-800">Date: {new Date(selectedQuote.quotationDate || selectedQuote.createdAt).toLocaleDateString("en-IN")}</p>
-                <p className="text-slate-800">Book No: {selectedQuote.bookNumber || "Book 1"}</p>
-                <p className="text-slate-800">Template: {selectedQuote.templateName || "Normal Shutter"}</p>
-              </div>
+            <div className="my-1">--------------------------------------------------</div>
+
+            {/* Date Section */}
+            <div className="mb-2">
+              <div>{formatDateDMY(selectedQuote.quotationDate || selectedQuote.createdAt)}</div>
+              <div>----------</div>
             </div>
 
-            <table className="w-full text-left border-collapse mb-3">
-              <thead>
-                <tr className="border-y border-slate-900 text-[9px] font-bold uppercase">
-                  <th className="py-1">No</th>
-                  <th className="py-1">Description</th>
-                  <th className="py-1 text-center">Qty</th>
-                  <th className="py-1 text-right">Rate</th>
-                  <th className="py-1 text-right">Amount</th>
-                  <th className="py-1 text-center print-hidden print:!hidden w-10">Act</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {printType === "bold_gaps" ? (
-                  <>
-                    {/* Bold Group */}
-                    {groupedFormattedItems?.boldItems.map((item: any, idx: number) => (
-                      <tr key={`bold-${idx}`} className="text-[10px] font-black text-slate-950">
-                        <td className="py-1 text-slate-500 font-bold">{idx + 1}</td>
-                        <td className="py-1">
-                          <span className="font-extrabold text-slate-950 block">{item.productName}</span>
-                          <span className="text-[9px] text-slate-900 font-bold block">{item.shutterName || item.material}</span>
-                        </td>
-                        <td className="py-1 text-center font-bold">{item.quantity} {item.unit || "PCS"}</td>
-                        <td className="py-1 text-right font-bold">₹{item.unitPrice}</td>
-                        <td className="py-1 text-right font-black">₹{item.lineTotal.toLocaleString("en-IN")}</td>
-                        <td className="py-1 text-center print-hidden print:!hidden">
-                          <button
-                            onClick={() => handleRemovePrintItem(item)}
-                            className="text-rose-600 hover:text-rose-800 font-black text-xs px-1 cursor-pointer"
-                            title="Remove from printout"
-                          >
-                            ×
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    
-                    {/* Gap 1 */}
-                    <tr className="h-4 border-none"><td colSpan={6} className="py-1 border-none"></td></tr>
-
-                    {/* Middle Group */}
-                    {groupedFormattedItems?.middleItems.map((item: any, idx: number) => {
-                      const startIdx = (groupedFormattedItems?.boldItems.length || 0) + idx + 1;
-                      return (
-                        <tr key={`mid-${idx}`} className="text-[10px]">
-                          <td className="py-1 text-slate-500">{startIdx}</td>
-                          <td className="py-1">
-                            <span className="font-bold text-slate-950 block">{item.productName}</span>
-                            <span className="text-[9px] text-slate-600 block">{item.shutterName || item.material}</span>
-                          </td>
-                          <td className="py-1 text-center text-slate-800">{item.quantity} {item.unit || "PCS"}</td>
-                          <td className="py-1 text-right text-slate-800">₹{item.unitPrice}</td>
-                          <td className="py-1 text-right font-bold text-slate-955">₹{item.lineTotal.toLocaleString("en-IN")}</td>
-                          <td className="py-1 text-center print-hidden print:!hidden">
-                            <button
-                              onClick={() => handleRemovePrintItem(item)}
-                              className="text-rose-600 hover:text-rose-800 font-black text-xs px-1 cursor-pointer"
-                              title="Remove from printout"
-                            >
-                              ×
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    
-                    {/* Gap 2 */}
-                    <tr className="h-4 border-none"><td colSpan={6} className="py-1 border-none"></td></tr>
-
-                    {/* End Group */}
-                    {groupedFormattedItems?.endItems.map((item: any, idx: number) => {
-                      const startIdx = (groupedFormattedItems?.boldItems.length || 0) + (groupedFormattedItems?.middleItems.length || 0) + idx + 1;
-                      return (
-                        <tr key={`end-${idx}`} className="text-[10px]">
-                          <td className="py-1 text-slate-500">{startIdx}</td>
-                          <td className="py-1">
-                            <span className="font-bold text-slate-955 block">{item.productName}</span>
-                            <span className="text-[9px] text-slate-600 block">{item.shutterName || item.material}</span>
-                          </td>
-                          <td className="py-1 text-center text-slate-800">{item.quantity} {item.unit || "PCS"}</td>
-                          <td className="py-1 text-right text-slate-800">₹{item.unitPrice}</td>
-                          <td className="py-1 text-right font-bold text-slate-955">₹{item.lineTotal.toLocaleString("en-IN")}</td>
-                          <td className="py-1 text-center print-hidden print:!hidden">
-                            <button
-                              onClick={() => handleRemovePrintItem(item)}
-                              className="text-rose-600 hover:text-rose-800 font-black text-xs px-1 cursor-pointer"
-                              title="Remove from printout"
-                            >
-                              ×
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </>
-                ) : (
-                  displayedItems.map((item: any, idx: number) => (
-                    <tr key={idx} className="text-[10px]">
-                      <td className="py-1 text-slate-500">{idx + 1}</td>
-                      <td className="py-1">
-                        <span className="font-bold text-slate-955 block">{item.productName}</span>
-                        <span className="text-[9px] text-slate-600 block">{item.shutterName || item.material}</span>
-                      </td>
-                      <td className="py-1 text-center text-slate-800">{item.quantity} {item.unit || "PCS"}</td>
-                      <td className="py-1 text-right text-slate-800">₹{item.unitPrice}</td>
-                      <td className="py-1 text-right font-bold text-slate-955">₹{item.lineTotal.toLocaleString("en-IN")}</td>
-                      <td className="py-1 text-center print-hidden print:!hidden">
-                        <button
-                          onClick={() => handleRemovePrintItem(item)}
-                          className="text-rose-600 hover:text-rose-800 font-black text-xs px-1 cursor-pointer"
-                          title="Remove from printout"
-                        >
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-
-                {/* Add Custom Item Row - Screen Only */}
-                <tr className="print-hidden print:!hidden bg-slate-50 text-[10px]">
-                  <td className="py-2 text-slate-400 text-center font-bold">+</td>
-                  <td className="py-2">
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="Custom Item Name..."
-                        id="custom-item-name"
-                        className="border border-slate-300 rounded-lg px-2 py-1 text-[10px] w-full max-w-[170px] outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Details..."
-                        id="custom-item-mat"
-                        className="border border-slate-300 rounded-lg px-2 py-1 text-[9px] w-full max-w-[90px] outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
-                      />
-                    </div>
-                  </td>
-                  <td className="py-2 text-center">
-                    <div className="flex items-center gap-1 justify-center">
-                      <input
-                        type="number"
-                        placeholder="Qty"
-                        id="custom-item-qty"
-                        defaultValue="1"
-                        className="border border-slate-300 rounded-lg px-1.5 py-1 text-[10px] w-12 text-center outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
-                      />
-                      <select
-                        id="custom-item-unit"
-                        defaultValue="Pcs"
-                        className="border border-slate-300 rounded-lg px-1.5 py-1 text-[10px] outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
-                      >
-                        <option value="Pcs">Pcs</option>
-                        <option value="Sft">Sft</option>
-                        <option value="Ft">Ft</option>
-                        <option value="Set">Set</option>
-                      </select>
-                    </div>
-                  </td>
-                  <td className="py-2 text-right">
-                    <input
-                      type="number"
-                      placeholder="Rate"
-                      id="custom-item-rate"
-                      defaultValue="0"
-                      className="border border-slate-300 rounded-lg px-2 py-1 text-[10px] w-16 text-right outline-none focus:border-slate-500 bg-white font-mono text-slate-800"
-                    />
-                  </td>
-                  <td className="py-2 text-right text-slate-400 font-bold">—</td>
-                  <td className="py-2 text-center">
-                    <button
-                      onClick={() => {
-                        const nameEl = document.getElementById("custom-item-name") as HTMLInputElement;
-                        const matEl = document.getElementById("custom-item-mat") as HTMLInputElement;
-                        const qtyEl = document.getElementById("custom-item-qty") as HTMLInputElement;
-                        const unitEl = document.getElementById("custom-item-unit") as HTMLSelectElement;
-                        const rateEl = document.getElementById("custom-item-rate") as HTMLInputElement;
-                        
-                        if (!nameEl || !nameEl.value.trim()) {
-                          alert("Please enter a product name");
-                          return;
-                        }
-                        
-                        const name = nameEl.value.trim();
-                        const mat = matEl ? matEl.value.trim() : "";
-                        const qty = parseFloat(qtyEl.value) || 1;
-                        const unit = unitEl.value;
-                        const rate = parseFloat(rateEl.value) || 0;
-                        const amount = Math.round(qty * rate);
-                        
-                        const newItem = {
-                          ruleId: "custom-" + Date.now(),
-                          productName: name,
-                          materialCategory: "Custom",
-                          variant: mat,
-                          quantity: qty,
-                          unit: unit,
-                          unitPrice: rate,
-                          lineTotal: amount,
-                          description: `${name} ${mat ? `(${mat})` : ""}`,
-                        };
-                        
-                        setPrintItems((prev) => [...prev, newItem]);
-                        
-                        // Reset inputs
-                        nameEl.value = "";
-                        if (matEl) matEl.value = "";
-                        qtyEl.value = "1";
-                        rateEl.value = "0";
-                      }}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] px-2.5 py-1.5 rounded-lg transition-all cursor-pointer uppercase tracking-wider"
-                    >
-                      Add
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div className="flex justify-end border-t border-slate-900 pt-2 mb-3">
-              <div className="w-48 text-[10px] space-y-1 text-right">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Subtotal:</span>
-                  <span className="font-bold">₹{printedSubtotal.toLocaleString("en-IN")}</span>
+            {/* Generated Items */}
+            <div className="space-y-0.5 min-h-[150px]">
+              {displayedItems.map((item: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-start gap-4">
+                  <span className="text-left break-words max-w-[75%]">{getItemDescription(item)}</span>
+                  <span className="text-right whitespace-nowrap shrink-0">
+                    {item.lineTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
-                {selectedQuote.discount > 0 && (
-                  <div className="flex justify-between text-rose-600">
-                    <span>Discount:</span>
-                    <span>-₹{selectedQuote.discount.toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {printedGstAmount > 0 && (
-                  <div className="flex justify-between">
-                    <span>GST ({selectedQuote.gstRate}%):</span>
-                    <span>₹{printedGstAmount.toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t border-slate-900 pt-1 font-black text-xs text-slate-955">
-                  <span>Total:</span>
-                  <span>₹{printedTotalAmount.toLocaleString("en-IN")}</span>
-                </div>
-              </div>
+              ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 border-t border-slate-300 pt-2 text-[8px] text-slate-600">
-              <div>
-                <span className="font-bold uppercase block mb-0.5">Terms</span>
-                <p className="whitespace-pre-line leading-tight">{selectedQuote.terms || branding?.quotationTerms}</p>
-              </div>
-              <div className="flex flex-col justify-end items-end text-right">
-                <p className="font-bold text-slate-950 uppercase text-[9px]">For KOHINOOR ROLLING SHUTTERS</p>
-                <div className="w-28 border-b border-slate-400 mt-6 pt-1 text-[8px] text-slate-500 text-center">
-                  Authorised Signatory
-                </div>
-              </div>
+            {/* Footer */}
+            <div className="my-1">--------------------------------------------------</div>
+            
+            <div className="flex justify-between font-bold">
+              <span>SUB TOTAL</span>
+              <span>
+                {(() => {
+                  const discount = selectedQuote.discount || 0;
+                  const rawSub = Math.max(0, printedSubtotal - discount) + printedGstAmount;
+                  return rawSub.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                })()}
+              </span>
             </div>
+            
+            <div className="flex justify-between">
+              <span>ROUND OFF</span>
+              {(() => {
+                const discount = selectedQuote.discount || 0;
+                const rawSub = Math.max(0, printedSubtotal - discount) + printedGstAmount;
+                const diff = selectedQuote.totalAmount - rawSub;
+                return (
+                  <span>{diff >= 0 ? "+" : ""}{diff.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                );
+              })()}
+            </div>
+
+            <div className="my-1">--------------------------------------------------</div>
+
+            <div className="flex justify-between font-bold text-[11px]">
+              <span>TOTAL</span>
+              <span>{selectedQuote.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+
+            <div className="my-1">--------------------------------------------------</div>
           </div>
         </div>
       ) : (
@@ -1518,39 +1659,97 @@ export default function QuotationsPage() {
                     </td>
                   </tr>
                 ) : (
-                  quotations
-                    .filter(
+                  (() => {
+                    const filtered = quotations.filter(
                       (q) =>
                         q.quoteNumber.toLowerCase().includes(search.toLowerCase()) ||
                         q.customer?.name.toLowerCase().includes(search.toLowerCase()) ||
                         (q.bookNumber && q.bookNumber.toLowerCase().includes(search.toLowerCase()))
-                    )
-                    .map((q) => (
-                      <tr key={q.id} className="hover:bg-secondary/25 transition-colors">
-                        <td className="p-4 font-bold font-mono text-foreground">{q.quoteNumber}</td>
-                        <td className="p-4 font-semibold text-foreground">{q.customer?.name}</td>
-                        <td className="p-4 font-mono text-muted-foreground">{q.bookNumber || "Book 1"}</td>
-                        <td className="p-4 text-muted-foreground">{q.templateName || "Normal Shutter"}</td>
-                        <td className="p-4 text-right font-bold text-foreground font-mono">
-                          ₹{q.totalAmount.toLocaleString("en-IN")}
-                        </td>
-                        <td className="p-4 text-muted-foreground font-mono">
-                          {new Date(q.quotationDate || q.createdAt).toLocaleDateString("en-IN")}
-                        </td>
-                        <td className="p-4 text-right pr-6">
-                          <button
-                            onClick={() => setSelectedQuote(q)}
-                            className="bg-secondary hover:bg-secondary/80 border border-border text-foreground font-semibold px-3 py-1 rounded-lg text-xs transition-all cursor-pointer"
-                          >
-                            View & Print
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    );
+                    const total = filtered.length;
+                    const pages = Math.ceil(total / itemsPerPage) || 1;
+                    const start = (currentPage - 1) * itemsPerPage;
+                    const paginated = filtered.slice(start, start + itemsPerPage);
+
+                    if (paginated.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={7} className="text-center p-8 text-muted-foreground">
+                            No matching quotations found.
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return (
+                      <>
+                        {paginated.map((q) => (
+                          <tr key={q.id} className="hover:bg-secondary/25 transition-colors">
+                            <td className="p-4 font-bold font-mono text-foreground">{q.quoteNumber}</td>
+                            <td className="p-4 font-semibold text-foreground">{q.customer?.name}</td>
+                            <td className="p-4 font-mono text-muted-foreground">{q.bookNumber || "Book 1"}</td>
+                            <td className="p-4 text-muted-foreground">{q.templateName || "Normal Shutter"}</td>
+                            <td className="p-4 text-right font-bold text-foreground font-mono">
+                              ₹{q.totalAmount.toLocaleString("en-IN")}
+                            </td>
+                            <td className="p-4 text-muted-foreground font-mono">
+                              {new Date(q.quotationDate || q.createdAt).toLocaleDateString("en-IN")}
+                            </td>
+                            <td className="p-4 text-right pr-6">
+                              <button
+                                onClick={() => setSelectedQuote(q)}
+                                className="bg-secondary hover:bg-secondary/80 border border-border text-foreground font-semibold px-3 py-1 rounded-lg text-xs transition-all cursor-pointer"
+                              >
+                                View & Print
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </>
+                    );
+                  })()
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Footer */}
+          {(() => {
+            const filtered = quotations.filter(
+              (q) =>
+                q.quoteNumber.toLowerCase().includes(search.toLowerCase()) ||
+                q.customer?.name.toLowerCase().includes(search.toLowerCase()) ||
+                (q.bookNumber && q.bookNumber.toLowerCase().includes(search.toLowerCase()))
+            );
+            const total = filtered.length;
+            const pages = Math.ceil(total / itemsPerPage) || 1;
+            if (total <= itemsPerPage) return null;
+            const start = (currentPage - 1) * itemsPerPage;
+
+            return (
+              <div className="p-4 border-t border-border bg-secondary/15 flex items-center justify-between gap-4 text-xs font-semibold text-muted-foreground select-none">
+                <span>
+                  Showing {start + 1} to {Math.min(start + itemsPerPage, total)} of {total} quotations
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 border border-border bg-card rounded-lg hover:bg-secondary disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(pages, prev + 1))}
+                    disabled={currentPage === pages}
+                    className="px-3 py-1.5 border border-border bg-card rounded-lg hover:bg-secondary disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
